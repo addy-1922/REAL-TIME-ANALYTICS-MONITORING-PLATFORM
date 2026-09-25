@@ -1,6 +1,4 @@
-# SignalWatch
-
-**Live demo: <https://real-time-analytics-monitoring-platform.onrender.com>**
+#Signal Watch
 
 The demo runs the production configuration: Uvicorn on Render's dynamic port, managed PostgreSQL, Render Redis for the channel layer and cache, plus Celery worker and Beat services. It starts with an empty database because `render.yaml` runs only `migrate` and does not seed, so every page redirects to the login screen until an account is created. See [Create the Blueprint](#create-the-blueprint) for that step.
 
