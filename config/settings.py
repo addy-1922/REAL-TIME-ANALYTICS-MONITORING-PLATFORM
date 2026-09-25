@@ -61,8 +61,24 @@ if not SECRET_KEY:
     else:
         raise RuntimeError("SECRET_KEY is required when DEBUG is False")
 
-ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
-CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
+ALLOWED_HOSTS = list(
+    dict.fromkeys(
+        [
+            "localhost",
+            "127.0.0.1",
+            "real-time-analytics-monitoring-platform-2.onrender.com",
+            *env_list("ALLOWED_HOSTS"),
+        ]
+    )
+)
+CSRF_TRUSTED_ORIGINS = list(
+    dict.fromkeys(
+        [
+            "https://real-time-analytics-monitoring-platform-2.onrender.com",
+            *env_list("CSRF_TRUSTED_ORIGINS"),
+        ]
+    )
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
