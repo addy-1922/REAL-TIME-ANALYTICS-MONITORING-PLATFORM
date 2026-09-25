@@ -1,5 +1,7 @@
 # SignalWatch
 
+A real-time monitoring platform built with Django and Django REST Framework to ingest, store, and analyze application events through REST APIs, with PostgreSQL-backed event tracking, Redis caching, and Celery for asynchronous analytics processing, alerts, and background tasks.
+
 SignalWatch is a Django 5.2 monitoring and analytics application for authenticated users who own projects, ingest application events, inspect errors and slow requests, configure alert rules, and receive notifications. This document describes the code and deployment files in this exact checkout.
 
 ## Verification status
