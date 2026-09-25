@@ -2,7 +2,9 @@ import os
 import secrets
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import parse_qsl, unquote, urlparse
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,19 +19,49 @@ def env_list(name, default=""):
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
 
+def database_config_from_url(url):
+    parsed = urlparse(url)
+    if parsed.scheme not in {"postgres", "postgresql"}:
+        raise ImproperlyConfigured("DATABASE_URL must use a PostgreSQL URL scheme")
+
+    name = unquote(parsed.path.lstrip("/"))
+    if not name or not parsed.hostname:
+        raise ImproperlyConfigured("DATABASE_URL must include a host and database name")
+
+    config = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": name,
+        "USER": unquote(parsed.username or ""),
+        "PASSWORD": unquote(parsed.password or ""),
+        "HOST": parsed.hostname,
+        "PORT": parsed.port or 5432,
+        "CONN_MAX_AGE": 60,
+        "CONN_HEALTH_CHECKS": True,
+    }
+    options = dict(parse_qsl(parsed.query))
+    if options:
+        config["OPTIONS"] = options
+    return config
+
+
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+DEBUG = env_bool("DEBUG", not DATABASE_URL)
+
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 if not SECRET_KEY:
-    if env_bool("DEBUG", True):
+    if DEBUG:
         SECRET_KEY = secrets.token_urlsafe(50)
     else:
         raise RuntimeError("SECRET_KEY is required when DEBUG is False")
 
-DEBUG = env_bool("DEBUG", True)
 ALLOWED_HOSTS = env_list(
     "ALLOWED_HOSTS",
     "localhost,127.0.0.1,real-time-analytics-monitoring-platform.onrender.com",
 )
-CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
+CSRF_TRUSTED_ORIGINS = env_list(
+    "CSRF_TRUSTED_ORIGINS",
+    "https://real-time-analytics-monitoring-platform.onrender.com",
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -81,19 +113,8 @@ TEMPLATES = [
     },
 ]
 
-if all(os.getenv(name) for name in ("DB_NAME", "DB_USER", "DB_HOST")):
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DB_NAME"),
-            "USER": os.getenv("DB_USER"),
-            "PASSWORD": os.getenv("DB_PASSWORD", ""),
-            "HOST": os.getenv("DB_HOST"),
-            "PORT": os.getenv("DB_PORT", "5432"),
-            "CONN_MAX_AGE": 60,
-            "CONN_HEALTH_CHECKS": True,
-        }
-    }
+if DATABASE_URL:
+    DATABASES = {"default": database_config_from_url(DATABASE_URL)}
 else:
     DATABASES = {
         "default": {

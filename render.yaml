@@ -22,26 +22,10 @@ services:
         sync: false
       - key: SECURE_SSL_REDIRECT
         value: "True"
-      - key: DB_NAME
+      - key: DATABASE_URL
         fromDatabase:
           name: signalwatch-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: signalwatch-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: signalwatch-db
-          property: password
-      - key: DB_HOST
-        fromDatabase:
-          name: signalwatch-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: signalwatch-db
-          property: port
+          property: connectionString
       - key: REDIS_URL
         fromService:
           type: keyvalue
@@ -114,26 +98,10 @@ services:
           environmentVariableKey: CSRF_TRUSTED_ORIGINS
       - key: SECURE_SSL_REDIRECT
         value: "True"
-      - key: DB_NAME
+      - key: DATABASE_URL
         fromDatabase:
           name: signalwatch-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: signalwatch-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: signalwatch-db
-          property: password
-      - key: DB_HOST
-        fromDatabase:
-          name: signalwatch-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: signalwatch-db
-          property: port
+          property: connectionString
       - key: REDIS_URL
         fromService:
           type: keyvalue
@@ -215,26 +183,10 @@ services:
           environmentVariableKey: SECRET_KEY
       - key: DEBUG
         value: "False"
-      - key: DB_NAME
+      - key: DATABASE_URL
         fromDatabase:
           name: signalwatch-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: signalwatch-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: signalwatch-db
-          property: password
-      - key: DB_HOST
-        fromDatabase:
-          name: signalwatch-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: signalwatch-db
-          property: port
+          property: connectionString
       - key: CELERY_BROKER_URL
         fromService:
           type: keyvalue
