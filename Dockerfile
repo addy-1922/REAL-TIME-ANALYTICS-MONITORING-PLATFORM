@@ -11,7 +11,7 @@ WORKDIR /app
 RUN groupadd --system app && useradd --system --gid app --create-home --home-dir /home/app --shell /usr/sbin/nologin app
 
 COPY requirements.txt ./
-RUN python -m pip install --no-cache_dir -r requirements.txt
+RUN python -m pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=app:app . .
 
