@@ -1,5 +1,9 @@
 # SignalWatch
 
+**Live demo: <https://real-time-analytics-monitoring-platform.onrender.com>**
+
+The demo runs the production configuration: Uvicorn on Render's dynamic port, managed PostgreSQL, Render Redis for the channel layer and cache, plus Celery worker and Beat services. It starts with an empty database because `render.yaml` runs only `migrate` and does not seed, so every page redirects to the login screen until an account is created. See [Create the Blueprint](#create-the-blueprint) for that step.
+
 A real-time monitoring platform built with Django and Django REST Framework to ingest, store, and analyze application events through REST APIs, with PostgreSQL-backed event tracking, Redis caching, and Celery for asynchronous analytics processing, alerts, and background tasks.
 
 SignalWatch is a Django 5.2 monitoring and analytics application for authenticated users who own projects, ingest application events, inspect errors and slow requests, configure alert rules, and receive notifications. This document describes the code and deployment files in this exact checkout.
@@ -750,7 +754,7 @@ gh repo view --web
 
 ## Render deployment
 
-`render.yaml` is a Render Blueprint for native Python services; it does not use the supplied Dockerfile. It declares:
+`render.yaml` is a Render Blueprint for native Python services; it does not use the supplied Dockerfile. The Blueprint is deployed at <https://real-time-analytics-monitoring-platform.onrender.com>. It declares:
 
 - `signalwatch-web`: Uvicorn bound to `0.0.0.0` and Render's dynamic `$PORT`.
 - `signalwatch-worker`: Celery's normal Linux prefork pool.
@@ -765,8 +769,8 @@ gh repo view --web
 1. Push the repository to GitHub.
 2. In Render, create a new Blueprint and select the repository.
 3. Render reads `render.yaml` from the repository root.
-4. Set `ALLOWED_HOSTS` to the exact web hostname only, without scheme, for example `signalwatch-web.onrender.com` if that is the generated hostname.
-5. Set `CSRF_TRUSTED_ORIGINS` to the exact HTTPS origin, including scheme, for example `https://signalwatch-web.onrender.com` if that is the generated hostname.
+4. Set `ALLOWED_HOSTS` to the exact web hostname only, without scheme, for example `real-time-analytics-monitoring-platform.onrender.com`. This value is already the default in `config/settings.py` and in `.env.example`, so an unset variable still serves the deployed domain. `render.yaml` declares the key with `sync: false`, so setting it by hand is optional.
+5. Set `CSRF_TRUSTED_ORIGINS` to the exact HTTPS origin, including scheme, for example `https://real-time-analytics-monitoring-platform.onrender.com`. Leave it empty for same-origin traffic, which is all the server-rendered pages need; it is required only when a browser posts from a different origin.
 6. The Blueprint starts with Django's console email backend, which works without external configuration but writes message bodies to service logs instead of sending mail. To send real email, change `EMAIL_BACKEND` to your SMTP backend and set `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, and `DEFAULT_FROM_EMAIL` in Render. The worker and Beat services inherit those same values.
 7. Deploy and review the web build, pre-deploy migration, and worker logs.
 8. Create the first administrator from the Render web service shell:
