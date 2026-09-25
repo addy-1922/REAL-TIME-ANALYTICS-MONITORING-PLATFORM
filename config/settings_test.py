@@ -9,7 +9,14 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
         "TEST": {"NAME": ":memory:"},
-    }
+    },
+    # Second in-memory database used by tests/test_migration_reset.py to exercise
+    # the destructive reset_migrations command without touching the default one.
+    "reset_probe": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+        "TEST": {"NAME": ":memory:"},
+    },
 }
 
 CACHES = {

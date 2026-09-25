@@ -16,7 +16,7 @@ This checkout has been executed and verified. The following commands were run su
 | Migration drift | `python manage.py makemigrations --check --dry-run` | `No changes detected` |
 | Deployment check | `python manage.py check --deploy` with `DEBUG=False` | Clean apart from the placeholder secret used for the check |
 | OpenAPI schema | `python manage.py spectacular --file schema.yml` | Generated with no warnings |
-| Test suite | `python manage.py test tests --settings=config.settings_test` | `Ran 114 tests ... OK` |
+| Test suite | `python manage.py test tests --settings=config.settings_test` | `Ran 120 tests ... OK` |
 | Demo data | `python manage.py seed_demo_data` | Seeded 2 projects, 420 events, alert rules, triggers and notifications |
 
 Both defects that earlier revisions of this document described as blocking are fixed: `django-redis` is now a pinned dependency in `requirements.txt`, and the `intcomma` filter is provided by the project template library `dashboard/templatetags/dashboard_tags.py`, which the affected templates load.
@@ -109,7 +109,7 @@ The checks in this document were executed with Python 3.13.9 and Django 5.2.17 o
 |-- notifications/            Notification model, views, services, and tasks
 |-- static/                   CSS, JavaScript, and image source directory
 |-- templates/                Django templates
-|-- tests/                   Automated test suite (114 tests) run under config.settings_test
+|-- tests/                   Automated test suite (120 tests) run under config.settings_test
 |-- media/                    Persistent uploaded profile pictures
 |-- manage.py                 Django management entry point
 |-- requirements.txt          Pinned Python dependencies
@@ -387,6 +387,14 @@ With `--owner`, the account's **existing** projects are used, so a real project 
 A verified run of `python manage.py seed_demo_data --events 420 --days 14 --reset` in this checkout produced 2 projects, 420 events, 2 alert triggers, and the associated notifications. A run of `python manage.py seed_demo_data --owner your-username --events 600 --days 21` populated an existing single-project account with 600 events, which then rendered 600 total / 168 errors / 432 successes and a 559 ms average response time on both the main dashboard and the project dashboard.
 
 The command writes through the ORM, so it does not exercise the API or WebSocket layers. Use the API ingestion and WebSocket sections below to verify those paths.
+
+A second custom command, `reset_migrations`, is a destructive one-time recovery tool for a database whose `django_migrations` state is inconsistent. It drops every Django table in the target database and re-applies all migrations, so use it only on a database with no data to preserve and only by hand. The one-time Render procedure is documented in the Render deployment section.
+
+```powershell
+python manage.py reset_migrations --yes
+```
+
+Without `--yes` the command prints the tables it would drop and exits without changing the database.
 
 ## API ingestion
 
@@ -677,7 +685,7 @@ There is no `pyproject.toml`, package manifest, Ruff configuration, mypy configu
 | Migration drift | `python manage.py makemigrations --check --dry-run` | `No changes detected` |
 | Deployment check | `python manage.py check --deploy` with `DEBUG=False` and a real `SECRET_KEY` | No issues other than the placeholder-secret warning caused by the test secret string |
 | OpenAPI schema generation | `python manage.py spectacular --file schema.yml` | Generates with zero warnings, including the `ApiKeyAuth` security scheme |
-| Test suite | `python manage.py test tests --settings=config.settings_test` | `Ran 114 tests ... OK` |
+| Test suite | `python manage.py test tests --settings=config.settings_test` | `Ran 120 tests ... OK` |
 | Lint | None available | No configured or installed project linter |
 | Type check | None available | No configured or installed type checker |
 
@@ -691,6 +699,7 @@ The suite covers:
 | `tests/test_analytics.py` | Aggregations, percentile math, filter forms, `error_q` / `success_q` semantics, cache versioning, and daily summaries |
 | `tests/test_api.py` | API-key authentication, event ingestion, DRF list and create permissions, filtering, and pagination |
 | `tests/test_dashboard_and_realtime.py` | Dashboard context and templates, `seed_demo_data`, and both WebSocket consumers including group naming and payload shape |
+| `tests/test_migration_reset.py` | The `monitoring` to `notifications` migration dependency, an `InconsistentMigrationHistory` reproduction, the `reset_migrations` recovery, and its confirmation guards |
 
 Run the checks locally before building:
 
@@ -778,6 +787,45 @@ python manage.py createsuperuser
 ```
 
 Do not run migrations independently from every service. The Blueprint's single pre-deploy migration is the intended deployment step; rerun it only when Render has not applied the migration or when an operational migration procedure explicitly requires it.
+
+### One-time migration reset for a new database
+
+A new deployment database can end up with `django_migrations` rows that disagree with the migration graph. Django then refuses every migration command with:
+
+```text
+django.db.migrations.exceptions.InconsistentMigrationHistory:
+Migration notifications.0001_initial is applied before its dependency
+monitoring.0001_initial on database 'default'.
+```
+
+That is a database-state problem, not a code problem. `notifications/migrations/0001_initial.py` declares `("monitoring", "0001_initial")` as a dependency, and `analytics/migrations/0001_initial.py` declares the same, so `monitoring.0001_initial` has to be applied first. The declaration is correct and must stay. Do not delete, rewrite, reorder, or fake a migration to work around the error.
+
+When the database holds no data worth keeping, the repository ships `reset_migrations` for a one-time clean reset. It drops every Django table in the target database, including `django_migrations`, and then re-applies the complete migration set in dependency order.
+
+| Option | Effect |
+| --- | --- |
+| `--yes` | Required confirmation. Without it the command prints the plan and exits without dropping anything |
+| `--database ALIAS` | Database alias to reset. Default: `default` |
+| `--confirm-database NAME` | Abort unless the target database name matches `NAME` exactly |
+| `--include-unmanaged` | Also drop tables that no current Django model claims, such as leftovers from a removed app |
+| `--skip-migrate` | Drop the tables without running `migrate` afterwards |
+
+Run it once, by hand, from the Render web service shell:
+
+1. Suspend `signalwatch-web`, `signalwatch-worker`, and `signalwatch-beat` so no running process holds a lock on the tables.
+2. Open the Render web service shell.
+3. Run the reset. The Blueprint database name is `signalwatch`, so pass it as the confirmation value:
+
+```bash
+python manage.py reset_migrations --yes --confirm-database signalwatch
+```
+
+The command prints every table it drops, runs `migrate --noinput`, then re-reads `django_migrations` and fails loudly if the history is still inconsistent. Its two-step equivalent is `python manage.py reset_migrations --yes --skip-migrate` followed by `python manage.py migrate --noinput`.
+
+4. Resume the three services and restart or redeploy the web service. The normal startup, `python manage.py migrate --noinput` in `docker-entrypoint.sh` and the Blueprint's `preDeployCommand`, then finds a consistent database, applies nothing new, and continues to Uvicorn.
+5. Recreate the first administrator with `python manage.py createsuperuser`, and add demo content with `python manage.py seed_demo_data` if it is wanted.
+
+The reset is never automatic. Nothing in the repository calls `reset_migrations`; it is a manual operator step, so a restart, redeploy, or scale event cannot destroy the database. Once the database holds data worth keeping, replace this procedure with a normal data-preserving repair.
 
 ### ASGI, WebSockets, origins, and Redis Channels
 
@@ -922,6 +970,10 @@ Verify broker and result URLs, Redis health, and migration completion. On Window
 ### Duplicate periodic jobs
 
 Stop every extra Beat process. Keep the Render Beat service at one instance and do not run a host Beat process against the same broker. Restart the single Beat process after changing its schedule.
+
+### `InconsistentMigrationHistory` during deployment
+
+`migrate` fails when `django_migrations` records a migration as applied while one of its declared dependencies is not applied, for example `notifications.0001_initial` applied before `monitoring.0001_initial`. Do not fake, reorder, or edit migrations to make the error disappear. Inspect the recorded state with `python manage.py showmigrations` from a service shell, then either repair the recorder deliberately or, on a new database with no data to preserve, run the one-time `reset_migrations` procedure in the Render deployment section.
 
 ### Port 8000 is already in use
 
