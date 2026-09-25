@@ -691,7 +691,7 @@ The suite covers:
 | `tests/test_analytics.py` | Aggregations, percentile math, filter forms, `error_q` / `success_q` semantics, cache versioning, and daily summaries |
 | `tests/test_api.py` | API-key authentication, event ingestion, DRF list and create permissions, filtering, and pagination |
 | `tests/test_dashboard_and_realtime.py` | Dashboard context and templates, `seed_demo_data`, and both WebSocket consumers including group naming and payload shape |
-| `tests/test_migration_recovery.py` | The `reset_render_database` confirmation, PostgreSQL-only, and test-runner guards, plus detection of a migration applied before its dependency |
+| `tests/test_migration_recovery.py` | The `reset_render_migrations` confirmation, PostgreSQL-only, and state-check guards |
 
 Run the checks locally before building:
 
@@ -792,9 +792,9 @@ monitoring.0001_initial on database 'default'.
 
 That is a database-state problem, not a code problem. `notifications/migrations/0001_initial.py` declares `("monitoring", "0001_initial")` because `Notification.project` is a foreign key to `monitoring.Project`, and `analytics/migrations/0001_initial.py` declares the same for the same reason. `monitoring.0001_initial` therefore has to be applied first. The declaration is correct and must stay. Do not delete, rewrite, reorder, or fake a migration to work around the error.
 
-On a database that holds no data worth keeping, reset the `public` schema once and let the normal startup migrate it from scratch. The opt-in `reset_render_database` command does this from the container entrypoint and is documented in [`docs/RENDER_DATABASE_MIGRATION_RECOVERY.md`](docs/RENDER_DATABASE_MIGRATION_RECOVERY.md); the equivalent manual `psql` procedure is in [`docs/RENDER_DATABASE_RESET.md`](docs/RENDER_DATABASE_RESET.md).
+On a database that holds no data worth keeping, reset the `public` schema once by hand and let the normal startup migrate it from scratch. The `reset_render_migrations` management command does this, and is documented in [`docs/RENDER_DATABASE_MIGRATION_RECOVERY.md`](docs/RENDER_DATABASE_MIGRATION_RECOVERY.md); the equivalent manual `psql` procedure is in [`docs/RENDER_DATABASE_RESET.md`](docs/RENDER_DATABASE_RESET.md).
 
-The recovery is opt-in and one-time. It runs only when `RESET_RENDER_DATABASE=true` is configured on the web service **and** `django_migrations` is found to be inconsistent. It is not set anywhere in this repository, and after the first successful reset the inconsistent state is gone, so later restarts, redeploys, and scale events reset nothing. `docker-entrypoint.sh` runs only `python manage.py migrate --noinput` followed by Uvicorn when the variable is absent, and the Blueprint's `preDeployCommand` runs the same migration. Once the database holds data worth keeping, replace this procedure with a normal data-preserving repair.
+The recovery is manual and one-time. `python manage.py reset_render_migrations` is never called by the application: `docker-entrypoint.sh` still runs only `python manage.py migrate --noinput` followed by Uvicorn, and the Blueprint's `preDeployCommand` runs the same migration, so a restart or redeploy can never destroy the database. The command refuses to run unless `RESET_RENDER_DATABASE=true` is provided and `django_migrations` is found to be in the exact inconsistent state, and that variable is not set anywhere in this repository. Once the database holds data worth keeping, replace this procedure with a normal data-preserving repair.
 
 ### ASGI, WebSockets, origins, and Redis Channels
 
@@ -852,7 +852,7 @@ Render's filesystem is ephemeral. The `media/` directory is not a durable Render
 | `ERROR_SPIKE_THRESHOLD` | No | `5` | Minimum error count in the current five-minute window before `monitoring.tasks.detect_abnormal_error_spikes` can create a trigger. |
 | `ERROR_SPIKE_MULTIPLIER` | No | `3` | Ratio the current five-minute error count must reach, relative to the previous window, for a spike trigger. |
 | `LOG_LEVEL` | No | `INFO` | Root Python logging level. |
-| `RESET_RENDER_DATABASE` | One-time recovery only | Unset everywhere in this repository | Must be exactly `true` to let `docker-entrypoint.sh` run `python manage.py reset_render_database`. That command additionally requires PostgreSQL and an inconsistent `django_migrations` history, drops and recreates the `public` schema, and re-applies every migration. Remove the variable from Render after the recovery succeeds. |
+| `RESET_RENDER_DATABASE` | One-time recovery only | Unset everywhere in this repository | Must be exactly `true` for the manual `python manage.py reset_render_migrations` command to do anything. That command additionally requires PostgreSQL and an inconsistent `django_migrations` history, then drops and recreates the `public` schema. It is never called by the application. |
 | `PORT` | Render: supplied | Dynamic | Uvicorn must bind to Render's supplied port. The Docker image listens on 8000. |
 | `DJANGO_SETTINGS_MODULE` | No | `config.settings` by entry points | Selects settings for management, Celery, and ASGI processes. |
 

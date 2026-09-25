@@ -1,15 +1,16 @@
 # Render migration history recovery
 
-This document describes the **one-time** recovery for the current `signalwatch-db`
-managed PostgreSQL instance, whose recorded migration history is inconsistent.
+A **one-time, manual** recovery for the current `signalwatch-db` managed
+PostgreSQL instance, whose recorded migration history is inconsistent.
 
-The recovery is opt-in. It runs only when `RESET_RENDER_DATABASE=true` is set on
-the Render web service **and** the database is found to be in the exact
-inconsistent state described below. A normal deploy never resets anything.
+The command documented here is never executed by the application. It is not
+called from `docker-entrypoint.sh`, the `Dockerfile`, `render.yaml`, Celery, or
+any view, so no restart, redeploy, or scale event can ever reach it. You run it
+by hand, once, in a one-off shell.
 
-## Why the migration error occurs
+## 1. Why the error occurs
 
-`migrate` stops with:
+`python manage.py migrate --noinput` stops with:
 
 ```text
 django.db.migrations.exceptions.InconsistentMigrationHistory:
@@ -17,7 +18,7 @@ Migration notifications.0001_initial is applied before its dependency
 monitoring.0001_initial on database 'default'.
 ```
 
-The migration files are correct and must not be changed.
+The migration files are correct and must not be changed, reordered, or faked.
 `notifications/migrations/0001_initial.py` declares
 
 ```python
@@ -28,7 +29,7 @@ dependencies = [
 ```
 
 because `Notification.project` is a `ForeignKey` to `monitoring.Project`
-(`to="monitoring.project"`), so the `monitoring` tables have to exist first.
+(`to="monitoring.project"`), so the `monitoring` tables must exist first.
 `analytics/migrations/0001_initial.py` declares the same dependency for the same
 reason. The order `migrate` always follows is:
 
@@ -39,60 +40,69 @@ analytics.0001_initial
 notifications.0001_initial
 ```
 
-The failure is therefore a **database state** problem: `django_migrations` in the
-Render database contains rows for `notifications.0001_initial` and
-`analytics.0001_initial` but not for `monitoring.0001_initial`. No `migrate` run
-can repair that, because Django refuses to act on an inconsistent history.
-Deleting, rewriting, reordering, or faking a migration is the wrong fix.
+The failure is therefore a **database state** problem, not a code problem: the
+`django_migrations` table in the Render database records `notifications.0001_initial`
+as applied while `monitoring.0001_initial` is not applied. Django refuses to act
+on an inconsistent history, and no `migrate` run can repair it. The fix is to
+clear the state and let the migrations apply from an empty database.
 
-## What `RESET_RENDER_DATABASE=true` does
+## 2. How to run the command
 
-The web service environment variable switches on one command, run by
-`docker-entrypoint.sh` before the normal migration step. That command is
-`python manage.py reset_render_database`, and it is guarded at four levels:
+Suspend `signalwatch-worker` and `signalwatch-beat` first, so no process holds a
+lock on the schema. Then open the **Render web service shell** and run:
 
-1. **Explicit confirmation.** Without `RESET_RENDER_DATABASE` set to `true`, the
-   command prints a message and exits non-zero without touching anything. Any
-   other value, including `false`, `1`, and `yes`, is refused.
-2. **PostgreSQL only.** The command refuses to run against SQLite or any other
-   backend, and it refuses to run under the test runner.
-3. **State detection.** It reads `django_migrations` and looks for an applied
-   migration whose declared dependency is not applied, which is exactly the
-   reported condition, for example
-   `notifications.0001_initial` applied before `monitoring.0001_initial`. If the
-   history is consistent it reports that and resets nothing.
-4. **No hidden state.** The reset is not performed from application code, from a
-   `post_migrate` hook, or from any other path. Without the environment variable
-   the entrypoint runs only `python manage.py migrate --noinput`.
+```bash
+RESET_RENDER_DATABASE=true python manage.py reset_render_migrations
+```
 
-When the guards pass, the command drops and recreates the PostgreSQL `public`
-schema, re-applies every migration, and then re-reads `django_migrations` to
-confirm the history is now consistent:
+On Windows PowerShell, or when the variable is already configured in Render:
+
+```powershell
+$env:RESET_RENDER_DATABASE = "true"
+python manage.py reset_render_migrations
+Remove-Item Env:RESET_RENDER_DATABASE
+```
+
+The command aborts, without changing anything, unless every one of these is
+true:
+
+1. The connection is PostgreSQL. SQLite and every other backend are refused.
+2. `RESET_RENDER_DATABASE` is exactly `true`. Any other value, including
+   `True`, `TRUE`, `1`, `yes`, and an unset variable, is refused.
+3. The `django_migrations` table exists.
+4. `notifications.0001_initial` is recorded as applied **and**
+   `monitoring.0001_initial` is **not** applied.
+
+If all four hold, it prints every table that is about to be deleted and then runs:
 
 ```sql
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
-GRANT ALL ON SCHEMA public TO <the DATABASE_URL role>;
-ALTER SCHEMA public OWNER TO <the DATABASE_URL role>;
+GRANT ALL ON SCHEMA public TO <the role from DATABASE_URL>;
+ALTER SCHEMA public OWNER TO <the role from DATABASE_URL>;
 ```
 
-The role name is read from the `DATABASE_URL` connection settings. No credential
-and no Render hostname is stored in the project.
+The role name comes from the `DATABASE_URL` connection settings. No credential
+and no Render hostname is stored in the project. If the schema is locked by
+another process the command fails after 30 seconds and asks you to suspend the
+services; the transaction is rolled back, so nothing is half-dropped.
 
-## Intended only for the new, empty database
+## 3. Required environment variable
 
-This mechanism exists for one reason: the current `signalwatch-db` instance is a
+```text
+RESET_RENDER_DATABASE=true
+```
+
+That is the only value that is accepted. The variable is not set anywhere in
+this repository, and it is not required by any normal deployment.
+
+## 4. Intended only for the new, empty Render database
+
+This command exists for one reason: the current `signalwatch-db` instance is a
 new deployment database that holds no data worth keeping. It is not a general
-maintenance tool.
+maintenance tool and it is not a migration.
 
-> **Warning.** `DROP SCHEMA public CASCADE` permanently and irreversibly deletes
-> every table, view, sequence, and all rows in the `public` schema of the
-> connected database, including `django_migrations`. There is no undo. Users,
-> projects, events, alerts, and notifications are lost. Run it once, only against
-> the new empty database. Once the database holds data worth keeping, use a
-> data-preserving repair instead and delete this mechanism.
-
-Before enabling it, confirm the database is the new one:
+Confirm the database before you run it:
 
 ```bash
 python manage.py showmigrations
@@ -102,68 +112,36 @@ python manage.py showmigrations
 SELECT app, name FROM django_migrations ORDER BY app, name;
 ```
 
-Expect `notifications` and `analytics` to be listed while `monitoring` is
-missing, and no application data that matters.
+Expect `notifications.0001_initial` to be listed while `monitoring.0001_initial`
+is missing. The command verifies this itself and aborts if it is not exactly the
+case.
 
-Suspend `signalwatch-worker` and `signalwatch-beat` while the reset runs so no
-process holds a lock on the schema. If the drop cannot take its lock within 30
-seconds the command fails and asks you to suspend the services and retry.
+## 5. It permanently deletes all data in the public schema
 
-## Procedure
+> **Warning.** `DROP SCHEMA public CASCADE` permanently and irreversibly deletes
+> every table, view, and sequence in the `public` schema of the connected
+> database, together with all rows in them, including the `django_migrations`
+> records. There is no undo. Users, projects, events, alert rules, triggers, and
+> notifications are all lost.
+>
+> Run it once, only against the new, empty database. Once that database holds
+> data worth keeping, use a data-preserving repair instead and do not run this
+> command again.
 
-1. Deploy this commit to Render.
-2. In the Render dashboard, suspend `signalwatch-worker` and `signalwatch-beat`.
-3. On `signalwatch-web`, add the environment variable below.
-4. Redeploy or restart `signalwatch-web`.
-5. Watch the deploy log.
-6. Remove the environment variable, then resume the worker and Beat services.
+## 6. After the reset, run the migrations
 
-The log of the recovery deploy looks like this:
-
-```text
-=== Running Django database migrations ===
-=== RESET_RENDER_DATABASE=true: running one-time database recovery ===
-Target database: alias=default name=signalwatch
-Inconsistent migration history detected:
-  - analytics.0001_initial is applied but its dependency monitoring.0001_initial is not
-  - notifications.0001_initial is applied but its dependency monitoring.0001_initial is not
-Resetting the public schema. 18 tables will be deleted.
-THIS PERMANENTLY DELETES ALL DATA.
-Applying accounts.0001_initial... OK
-Applying monitoring.0001_initial... OK
-Applying analytics.0001_initial... OK
-Applying notifications.0001_initial... OK
-Reset complete. 19 migrations applied in dependency order.
-Remove RESET_RENDER_DATABASE from the Render environment when the recovery is
-done. Normal deployments only run python manage.py migrate --noinput.
-=== Starting Uvicorn ===
-```
-
-## Self-disabling
-
-The recovery is a one-time action by construction, not by convention:
-
-- It only fires when the environment variable is set, and the variable is not set
-  anywhere in the repository.
-- It only resets when the inconsistent history is actually present. After the
-  first successful reset that state no longer exists, so any later restart,
-  redeploy, crash, or scale event finds a consistent database and resets nothing,
-  even if the variable were still configured.
-- It runs before `migrate`, which is the same command the normal startup already
-  runs, so a second `migrate` in the same entrypoint is a harmless no-op.
-
-## After the successful deployment
-
-Remove `RESET_RENDER_DATABASE` from the Render web service environment
-variables. Resume `signalwatch-worker` and `signalwatch-beat`, then recreate the
-first administrator, because the old rows went with the schema:
+The command deliberately does not migrate. With the schema empty, run:
 
 ```bash
-python manage.py createsuperuser
-python manage.py seed_demo_data      # optional demo content
+python manage.py migrate --noinput
 ```
 
-Verify afterwards:
+Every migration is then applied in dependency order, `monitoring.0001_initial`
+before `analytics.0001_initial` and `notifications.0001_initial`. The
+application does not need to be restarted for this; the next deploy runs the
+same command through `docker-entrypoint.sh`.
+
+Verify:
 
 ```bash
 python manage.py showmigrations      # every migration is [X]
@@ -174,12 +152,26 @@ python manage.py migrate --noinput   # "No migrations to apply."
 https://<web-host>/health/           # 200
 ```
 
-From this point a normal deployment does nothing but run Django migrations:
-`python manage.py migrate --noinput` in `docker-entrypoint.sh`, and
-`preDeployCommand: python manage.py migrate --noinput` in `render.yaml`.
+Recreate the first administrator, because the old rows went with the schema:
+
+```bash
+python manage.py createsuperuser
+python manage.py seed_demo_data      # optional demo content
+```
+
+## 7. Remove `RESET_RENDER_DATABASE` afterwards
+
+If you passed the variable inline on the command line, nothing is left to clean
+up. If you set it in Render, delete it from the **signalwatch-web** service
+environment variables once the reset and the migration have succeeded, then
+resume `signalwatch-worker` and `signalwatch-beat`.
+
+After that, deployments do nothing but run Django migrations:
+
+- `docker-entrypoint.sh`: `python manage.py migrate --noinput`, then Uvicorn.
+- `render.yaml`: `preDeployCommand: python manage.py migrate --noinput`.
 
 ## Manual alternative
 
-The same reset can be performed by hand from a `psql` session without the
-environment variable, which is useful if you prefer to keep the startup path
-untouched. See [`RENDER_DATABASE_RESET.md`](RENDER_DATABASE_RESET.md).
+The same reset can be typed directly into a `psql` session without the command.
+See [`RENDER_DATABASE_RESET.md`](RENDER_DATABASE_RESET.md).
