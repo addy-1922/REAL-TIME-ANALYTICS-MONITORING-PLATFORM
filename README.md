@@ -380,7 +380,7 @@ The command creates the demo superuser `demo` with the password `DemoPass123!` w
 
 With `--owner`, the account's **existing** projects are used, so a real project immediately gains history. If that account has no projects, the two demo blueprints are created for it. `--reset` is scoped to the target account only; it never touches another user's data. Using an unknown `--owner` value fails with a `CommandError` instead of silently creating an account.
 
-A verified run of `python manage.py seed_demo_data --events 420 --days 14 --reset` in this checkout produced 2 projects, 420 events, 2 alert triggers, and the associated notifications. A run of `python manage.py seed_demo_data --owner Aditya19 --events 600 --days 21` populated an existing single-project account with 600 events, which then rendered 600 total / 168 errors / 432 successes and a 559 ms average response time on both the main dashboard and the project dashboard.
+A verified run of `python manage.py seed_demo_data --events 420 --days 14 --reset` in this checkout produced 2 projects, 420 events, 2 alert triggers, and the associated notifications. A run of `python manage.py seed_demo_data --owner your-username --events 600 --days 21` populated an existing single-project account with 600 events, which then rendered 600 total / 168 errors / 432 successes and a 559 ms average response time on both the main dashboard and the project dashboard.
 
 The command writes through the ORM, so it does not exercise the API or WebSocket layers. Use the API ingestion and WebSocket sections below to verify those paths.
 
