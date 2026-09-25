@@ -15,6 +15,12 @@ RUN python -m pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=app:app . .
 
+# /app itself is created by WORKDIR and stays owned by root, and .dockerignore
+# keeps staticfiles out of the build context, so collectstatic running as the
+# unprivileged app user cannot create STATIC_ROOT. Create and hand it over
+# while still root.
+RUN mkdir -p /app/staticfiles && chown -R app:app /app/staticfiles
+
 USER app
 RUN python manage.py collectstatic --noinput
 
