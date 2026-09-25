@@ -17,9 +17,9 @@ services:
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
-        sync: false
+        value: "localhost,127.0.0.1,real-time-analytics-monitoring-platform.onrender.com"
       - key: CSRF_TRUSTED_ORIGINS
-        sync: false
+        value: "https://real-time-analytics-monitoring-platform.onrender.com"
       - key: SECURE_SSL_REDIRECT
         value: "True"
       - key: DATABASE_URL
@@ -83,19 +83,19 @@ services:
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: SECRET_KEY
+          envVarKey: SECRET_KEY
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: ALLOWED_HOSTS
+          envVarKey: ALLOWED_HOSTS
       - key: CSRF_TRUSTED_ORIGINS
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: CSRF_TRUSTED_ORIGINS
+          envVarKey: CSRF_TRUSTED_ORIGINS
       - key: SECURE_SSL_REDIRECT
         value: "True"
       - key: DATABASE_URL
@@ -131,37 +131,37 @@ services:
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_BACKEND
+          envVarKey: EMAIL_BACKEND
       - key: EMAIL_HOST
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_HOST
+          envVarKey: EMAIL_HOST
       - key: EMAIL_PORT
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_PORT
+          envVarKey: EMAIL_PORT
       - key: EMAIL_HOST_USER
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_HOST_USER
+          envVarKey: EMAIL_HOST_USER
       - key: EMAIL_HOST_PASSWORD
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_HOST_PASSWORD
+          envVarKey: EMAIL_HOST_PASSWORD
       - key: EMAIL_USE_TLS
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_USE_TLS
+          envVarKey: EMAIL_USE_TLS
       - key: DEFAULT_FROM_EMAIL
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: DEFAULT_FROM_EMAIL
+          envVarKey: DEFAULT_FROM_EMAIL
       - key: LOG_LEVEL
         value: INFO
 
@@ -180,7 +180,7 @@ services:
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: SECRET_KEY
+          envVarKey: SECRET_KEY
       - key: DEBUG
         value: "False"
       - key: DATABASE_URL
@@ -207,37 +207,37 @@ services:
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_BACKEND
+          envVarKey: EMAIL_BACKEND
       - key: EMAIL_HOST
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_HOST
+          envVarKey: EMAIL_HOST
       - key: EMAIL_PORT
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_PORT
+          envVarKey: EMAIL_PORT
       - key: EMAIL_HOST_USER
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_HOST_USER
+          envVarKey: EMAIL_HOST_USER
       - key: EMAIL_HOST_PASSWORD
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_HOST_PASSWORD
+          envVarKey: EMAIL_HOST_PASSWORD
       - key: EMAIL_USE_TLS
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: EMAIL_USE_TLS
+          envVarKey: EMAIL_USE_TLS
       - key: DEFAULT_FROM_EMAIL
         fromService:
           type: web
           name: signalwatch-web
-          environmentVariableKey: DEFAULT_FROM_EMAIL
+          envVarKey: DEFAULT_FROM_EMAIL
       - key: LOG_LEVEL
         value: INFO
 

@@ -45,7 +45,10 @@ def database_config_from_url(url):
 
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-DEBUG = env_bool("DEBUG", not DATABASE_URL)
+IS_RENDER = env_bool("RENDER", False)
+if IS_RENDER and not DATABASE_URL:
+    raise ImproperlyConfigured("DATABASE_URL must be set on Render")
+DEBUG = env_bool("DEBUG", not (IS_RENDER or bool(DATABASE_URL)))
 
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 if not SECRET_KEY:
