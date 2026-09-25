@@ -25,7 +25,10 @@ if not SECRET_KEY:
         raise RuntimeError("SECRET_KEY is required when DEBUG is False")
 
 DEBUG = env_bool("DEBUG", True)
-ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
+ALLOWED_HOSTS = env_list(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1,real-time-analytics-monitoring-platform.onrender.com",
+)
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 
 INSTALLED_APPS = [
