@@ -1,0 +1,30 @@
+{% load static %}<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <meta name="theme-color" content="#0b1220">
+  <title>{% block title %}SignalWatch{% endblock %} · SignalWatch</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" integrity="sha256-IGtui7APx7uix+6AykHbPp4FunvgqjWr66nP1TV/XQ4=" crossorigin="anonymous" defer></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
+  <script src="{% static 'js/dashboard.js' %}" defer></script>
+  <script src="{% static 'js/realtime.js' %}" defer></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{% if user.is_authenticated %}app-body{% else %}auth-body{% endif %}{% block body_class %}{% endblock %}" data-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}" data-notification-websocket="/ws/notifications/">
+{% block body %}<div class="standalone"><a class="skip-link" href="#main-content">Skip to main content</a><main class="standalone__main" id="main-content">{% block content %}{% endblock %}</main></div>{% endblock %}
+  <div class="toast-region" aria-live="polite" aria-atomic="false" aria-label="Notifications" data-toast-region></div>
+  <dialog class="modal" data-confirm-dialog aria-labelledby="confirm-dialog-title">
+    <div class="modal__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.6 2.4 17.5A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.5L13.7 3.6a2 2 0 0 0-3.4 0Z"/></svg></div>
+    <h2 id="confirm-dialog-title">Confirm action</h2>
+    <p data-confirm-message>This action cannot be undone.</p>
+    <div class="modal__actions">
+      <button class="btn btn-secondary" type="button" data-confirm-cancel>Cancel</button>
+      <button class="btn btn-danger" type="button" data-confirm-accept>Confirm</button>
+    </div>
+  </dialog>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

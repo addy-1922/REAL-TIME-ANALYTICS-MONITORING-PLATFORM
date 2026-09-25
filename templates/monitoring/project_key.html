@@ -1,0 +1,17 @@
+{% extends "base_app.html" %}
+
+{% block title %}API key generated{% endblock %}
+{% block topbar_eyebrow %}Projects{% endblock %}
+{% block topbar_title %}API key generated{% endblock %}
+
+{% block content %}
+<section class="confirmation-card card confirmation-card--key" aria-labelledby="new-key-title">
+  <div class="confirmation-card__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+  <span class="card__eyebrow">Copy once</span>
+  <h1 id="new-key-title">API key generated</h1>
+  <p>The new key for <strong>{{ project.name }}</strong> is shown below. It will not be displayed again, so store it in a secure location.</p>
+  <div class="secret-value secret-value--large"><code id="new-api-key">{{ api_key }}</code><button class="btn btn-primary" type="button" data-copy-target="#new-api-key"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy key</button></div>
+  <div class="form-note form-note--warning"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.6 2.4 17.5A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.5L13.7 3.6a2 2 0 0 0-3.4 0Z"/></svg>Regenerating a key immediately invalidates the previous key.</div>
+  <a class="btn btn-secondary" href="{% url 'monitoring:project_detail' project.pk %}">Return to {{ project.name }}</a>
+</section>
+{% endblock %}

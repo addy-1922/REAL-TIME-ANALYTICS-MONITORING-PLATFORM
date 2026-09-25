@@ -1,0 +1,24 @@
+<div class="dropdown-panel dropdown-panel--notifications" id="notification-dropdown" data-dropdown-panel data-notification-dropdown hidden>
+  <div class="dropdown-panel__header">
+    <div><strong>Notifications</strong><small>Latest account alerts</small></div>
+    <a href="{% url 'notifications:history' %}">View all</a>
+  </div>
+  <div class="notification-feed" data-notification-feed data-notification-history-url="{% url 'notifications:history' %}">
+    {% for notification in recent_notifications %}
+    <article class="notification-item{% if not notification.is_read %} is-unread{% endif %}" data-notification-item>
+      <span class="notification-item__indicator" aria-hidden="true"></span>
+      <a href="{% url 'notifications:history' %}#notification-{{ notification.pk }}">
+        <strong>{{ notification.title }}</strong>
+        <span>{{ notification.message }}</span>
+        <time datetime="{{ notification.created_at|date:'c' }}">{{ notification.created_at }}</time>
+      </a>
+    </article>
+    {% empty %}
+    <div class="dropdown-empty" data-notification-empty>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+      <span>No recent notifications</span>
+    </div>
+    {% endfor %}
+  </div>
+  <a class="dropdown-panel__footer" href="{% url 'notifications:history' %}">Open notification history</a>
+</div>

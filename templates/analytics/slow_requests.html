@@ -1,0 +1,63 @@
+{% extends "base_app.html" %}
+{% load dashboard_tags %}
+
+{% block title %}Slow requests{% endblock %}
+{% block topbar_eyebrow %}Analytics{% endblock %}
+{% block topbar_title %}Slow requests{% endblock %}
+
+{% block content %}
+<div class="page-stack">
+  <header class="page-header">
+    <div><div class="eyebrow">Performance</div><h1>Slow requests</h1><p>Measured requests at or above the configured response-time threshold.</p></div>
+    <a class="btn btn-secondary" href="{% url 'analytics:error_monitoring' %}">Error monitoring</a>
+  </header>
+
+  {% if threshold is not None %}<div class="threshold-banner"><span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><strong>Current threshold</strong><p>Requests taking {{ threshold|intcomma }} ms or longer are included.</p></div></div>{% endif %}
+
+  <form method="get" class="filter-panel" aria-label="Slow request filters">
+    <details {% if form.data %}open{% endif %}>
+      <summary><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7L4 5Z"/></svg>Performance filters</span>{% if form.data %}<span class="badge badge-primary">Active</span>{% endif %}</summary>
+      <div class="filter-panel__body">
+        {% if form.non_field_errors %}<div class="form-alert" role="alert">{% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+        <div class="filter-grid">
+          <div class="form-field"><label for="{{ form.project.id_for_label }}">Project</label>{{ form.project }}{% for error in form.project.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+          <div class="form-field"><label for="{{ form.date_from.id_for_label }}">From date</label>{{ form.date_from }}{% for error in form.date_from.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+          <div class="form-field"><label for="{{ form.date_to.id_for_label }}">To date</label>{{ form.date_to }}{% for error in form.date_to.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+          <div class="form-field"><label for="{{ form.search.id_for_label }}">Search</label>{{ form.search }}{% for error in form.search.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+        </div>
+        <div class="filter-panel__actions"><a class="btn btn-ghost" href="{% url 'analytics:slow_requests' %}">Reset filters</a><button class="btn btn-primary" type="submit">Apply filters</button></div>
+      </div>
+    </details>
+  </form>
+
+  <section class="metric-grid metric-grid--compact" aria-label="Slow request summary">
+    <article class="metric-card"><span class="metric-label">Slow requests</span><strong class="metric-value">{{ overview.total|intcomma }}</strong><span class="metric-meta">At or above threshold</span></article>
+    <article class="metric-card"><span class="metric-label">Average</span><strong class="metric-value">{% if overview.avg_response_time is not None %}{{ overview.avg_response_time|floatformat:0 }} ms{% else %}—{% endif %}</strong><span class="metric-meta">Across matching requests</span></article>
+    <article class="metric-card"><span class="metric-label">Maximum</span><strong class="metric-value">{% if overview.max_response_time is not None %}{{ overview.max_response_time|floatformat:0 }} ms{% else %}—{% endif %}</strong><span class="metric-meta">Highest measured latency</span></article>
+    <article class="metric-card"><span class="metric-label">p95 response</span><strong class="metric-value">{% if overview.p95_response_time is not None %}{{ overview.p95_response_time|floatformat:0 }} ms{% else %}—{% endif %}</strong><span class="metric-meta">Upper-tail latency</span></article>
+  </section>
+
+  {% if timeline %}
+  <section class="dashboard-grid dashboard-grid--charts" aria-label="Slow request charts">
+    <article class="card chart-card chart-card--wide">
+      <div class="card__header"><div><span class="card__eyebrow">Timeline</span><h2>Slow request volume</h2><p>Hourly request and error buckets for the current filters.</p></div></div>
+      <ol id="slow-timeline-data" class="chart-data" hidden>{% for point in timeline %}<li data-chart-row data-timestamp="{{ point.timestamp|date:'c' }}" data-total="{{ point.total }}" data-errors="{{ point.errors }}" data-successes="{{ point.successes }}" data-response="{% if point.avg_response_time is not None %}{{ point.avg_response_time|floatformat:6 }}{% endif %}"></li>{% endfor %}</ol>
+      <div class="chart-container chart-container--large"><canvas data-chart="row-line" data-chart-rows="#slow-timeline-data" data-chart-line-key="total" aria-label="Line chart of hourly slow request counts" role="img">Hourly slow request counts are available in the page source.</canvas></div>
+    </article>
+    <article class="card chart-card">
+      <div class="card__header"><div><span class="card__eyebrow">Distribution</span><h2>Slow requests by service</h2></div></div>
+      {% if services %}<ol id="slow-services-data" class="chart-data" hidden>{% for item in services %}<li data-chart-row data-label="{{ item.service|default:'Unspecified' }}" data-value="{{ item.count }}"></li>{% endfor %}</ol><div class="chart-container chart-container--doughnut"><canvas data-chart="row-doughnut" data-chart-rows="#slow-services-data" data-chart-label-key="label" data-chart-value-key="value" aria-label="Doughnut chart of slow requests by service" role="img">Slow request counts by service are available in the page source.</canvas></div>{% else %}<div class="empty-state empty-state--chart"><h3>No service data</h3><p>No service breakdown is available for these filters.</p></div>{% endif %}
+    </article>
+  </section>
+  {% endif %}
+
+  <section class="card table-card" aria-labelledby="slow-events-title">
+    <div class="card__header"><div><span class="card__eyebrow">Latest</span><h2 id="slow-events-title">Slow request events</h2><p>Showing the latest {{ events|length }} matching event{{ events|length|pluralize }}.</p></div></div>
+    {% if events %}
+    <div class="table-wrap"><table class="data-table"><thead><tr><th scope="col">Time</th><th scope="col">Project</th><th scope="col">Event</th><th scope="col">Service</th><th scope="col">Environment</th><th scope="col">Response</th><th scope="col">Result</th></tr></thead><tbody>{% for event in events %}<tr><td><time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at }}</time></td><td><a class="table-primary" href="{% url 'monitoring:project_detail' event.project.pk %}">{{ event.project }}</a></td><td><a class="table-primary" href="{% url 'monitoring:event_detail' event.project.pk event.pk %}">{{ event.display_event_type }}</a><span class="table-secondary">#{{ event.pk }}</span></td><td>{{ event.service|default:"—" }}</td><td>{{ event.environment|default:"—" }}</td><td><span class="text-warning"><strong>{{ event.response_time|intcomma }} ms</strong></span></td><td>{% if event.is_error %}<span class="badge badge-danger">Error</span>{% else %}<span class="badge badge-neutral">Other</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+    {% else %}
+    <div class="empty-state empty-state--page"><span class="empty-state__icon empty-state__icon--success"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 12 2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span><h2>No slow requests found</h2><p>No requests meet the current threshold and filters.</p><a class="btn btn-secondary" href="{% url 'analytics:slow_requests' %}">Clear filters</a></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

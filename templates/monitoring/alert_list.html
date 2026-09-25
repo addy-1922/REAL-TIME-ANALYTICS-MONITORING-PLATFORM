@@ -1,0 +1,52 @@
+{% extends "base_app.html" %}
+
+{% block title %}Alerts · {{ project.name }}{% endblock %}
+{% block topbar_eyebrow %}{{ project.name }}{% endblock %}
+{% block topbar_title %}Alert rules{% endblock %}
+
+{% block content %}
+<div class="page-stack">
+  <header class="page-header">
+    <div><div class="eyebrow">Alerting</div><h1>Alert rules</h1><p>Configure thresholds that create notifications when {{ project.name }} needs attention.</p></div>
+    <div class="page-header__actions"><a class="btn btn-secondary" href="{% url 'monitoring:project_dashboard' project.pk %}">Dashboard</a><a class="btn btn-primary" href="{% url 'monitoring:alert_create' project.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New alert rule</a></div>
+  </header>
+
+  <nav class="tab-nav" aria-label="Project navigation">
+    <a href="{% url 'monitoring:project_detail' project.pk %}">Overview</a>
+    <a href="{% url 'monitoring:event_list' project.pk %}">Events</a>
+    <a class="is-active" href="{% url 'monitoring:alert_list' project.pk %}" aria-current="page">Alerts</a>
+  </nav>
+
+  <section class="card table-card" aria-label="Alert rules">
+    <div class="card__header"><div><span class="card__eyebrow">Rules</span><h2>{{ alert_rules|length }} configured rule{{ alert_rules|length|pluralize }}</h2><p>Toggle a rule at any time. Existing notifications are not changed.</p></div></div>
+    {% if alert_rules %}
+    <div class="table-wrap">
+      <table class="data-table alert-table">
+        <thead><tr><th scope="col">Rule</th><th scope="col">Condition</th><th scope="col">Window</th><th scope="col">Cooldown</th><th scope="col">Status</th><th scope="col">Updated</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+        <tbody>
+          {% for alert in alert_rules %}
+          <tr>
+            <td><span class="table-primary">{{ alert.name }}</span><span class="table-secondary">{{ alert.get_metric_display }}</span></td>
+            <td><span class="condition-expression"><strong>{{ alert.get_condition_display }}</strong> {{ alert.threshold }}</span></td>
+            <td>{{ alert.time_window_minutes }} min</td>
+            <td>{{ alert.cooldown_minutes }} min</td>
+            <td>{% if alert.is_active %}<span class="badge badge-success"><span class="status-dot is-online" aria-hidden="true"></span>Active</span>{% else %}<span class="badge badge-neutral">Disabled</span>{% endif %}</td>
+            <td><time datetime="{{ alert.updated_at|date:'c' }}">{{ alert.updated_at }}</time></td>
+            <td><form method="post" action="{% url 'monitoring:alert_toggle' project.pk alert.pk %}">{% csrf_token %}<button class="btn btn-sm {% if alert.is_active %}btn-secondary{% else %}btn-primary{% endif %}" type="submit">{% if alert.is_active %}Disable{% else %}Enable{% endif %}</button></form></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state empty-state--page">
+      <span class="empty-state__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></span>
+      <h2>No alert rules yet</h2><p>Create a threshold using error count, error rate, or average response time.</p>
+      <a class="btn btn-primary" href="{% url 'monitoring:alert_create' project.pk %}">Create alert rule</a>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="info-banner"><span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg></span><div><strong>How alerts work</strong><p>Rules evaluate their metric over the configured time window. Cooldowns limit repeated notifications after a trigger.</p></div><a href="{% url 'notifications:history' %}">View notifications</a></section>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base_auth.html" %}
+
+{% block title %}Sign in{% endblock %}
+
+{% block content %}
+<div class="auth-layout">
+  <section class="auth-intro" aria-labelledby="auth-page-title">
+    <span class="auth-intro__badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.4 8 8 9 4.6-1 8-4 8-9V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg>Real-time observability</span>
+    <h1 id="auth-page-title">Know what your systems are doing, now.</h1>
+    <p>Sign in to inspect event streams, response performance, errors, and alert activity from one focused workspace.</p>
+    <ul class="feature-list">
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Live event and notification updates</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Measured cross-project analytics</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Configurable performance alerts</li>
+    </ul>
+  </section>
+  <section class="auth-card" aria-labelledby="signin-title">
+    <div class="auth-card__header"><span class="auth-card__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v14h5M14 8l4 4-4 4m4-4H9"/></svg></span><h2 id="signin-title">Welcome back</h2><p>Enter your credentials to access your workspace.</p></div>
+    <form method="post" class="auth-form" data-loading-form>
+      {% csrf_token %}
+      {% include "registration/_form_fields.html" %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="btn btn-primary btn-block" type="submit"><span>Sign in</span><span class="button-loader" aria-hidden="true"></span></button>
+    </form>
+    <div class="auth-card__links"><a href="{% url 'accounts:password_reset' %}">Forgot your password?</a><span>New here? <a href="{% url 'accounts:register' %}">Create an account</a></span></div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base_app.html" %}
+
+{% block title %}Edit profile{% endblock %}
+{% block topbar_eyebrow %}Account{% endblock %}
+{% block topbar_title %}Edit profile{% endblock %}
+
+{% block content %}
+<div class="page-stack page-stack--form">
+  <header class="page-header"><div><div class="eyebrow">Personal settings</div><h1>Edit profile</h1><p>Update your avatar, bio, role, timezone, and report preference.</p></div></header>
+  <section class="card form-card">
+    <form method="post" enctype="multipart/form-data" class="stacked-form" data-loading-form>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="form-alert" role="alert">{% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+      {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+      <div class="form-section">
+        <div class="form-section__heading"><h2>Profile picture</h2><p>Use a valid image up to 5 MB.</p></div>
+        <div class="avatar-upload">
+          <div class="avatar-upload__preview">{% if profile.avatar %}<img src="{{ profile.avatar.url }}" alt="Current profile picture" width="80" height="80">{% else %}<span aria-hidden="true">{{ user.get_username|slice:':1'|upper }}</span>{% endif %}</div>
+          <div class="form-field">{{ form.avatar }}{% if form.avatar.help_text %}<div class="form-help">{{ form.avatar.help_text }}</div>{% endif %}{% for error in form.avatar.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>
+        </div>
+        {% if profile.avatar %}<a class="text-link text-link--danger" href="{% url 'accounts:profile_picture_delete' %}">Remove current picture</a>{% endif %}
+      </div>
+      <div class="form-section form-section--grid">
+        {% for field in form.visible_fields %}
+        {% if field.name != 'avatar' %}
+        <div class="form-field{% if field.errors %} has-error{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="form-help">{{ field.help_text }}</div>{% endif %}
+          {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      <div class="form-actions form-actions--card"><a class="btn btn-secondary" href="{% url 'accounts:profile' %}">Cancel</a><button class="btn btn-primary" type="submit"><span>Save changes</span><span class="button-loader" aria-hidden="true"></span></button></div>
+    </form>
+  </section>
+</div>
+{% endblock %}

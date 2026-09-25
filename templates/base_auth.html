@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="auth-shell">
+  <header class="auth-header">
+    <a href="{% url 'accounts:login' %}" class="brand-mark" aria-label="SignalWatch sign in">
+      <span class="brand-mark__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h4l2.2-6 4.1 12 2.1-6H21"/></svg></span>
+      <span><strong>SignalWatch</strong><small>Observability</small></span>
+    </a>
+  </header>
+  <main class="auth-main" id="main-content">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="auth-footer"><span>© {% now "Y" %} SignalWatch</span><a href="{% url 'dashboard:health' %}">System health</a></footer>
+</div>
+{% endblock %}

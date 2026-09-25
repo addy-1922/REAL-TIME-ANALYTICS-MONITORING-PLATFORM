@@ -1,0 +1,32 @@
+**
+!requirements.txt
+!manage.py
+!config/
+!config/**
+!accounts/
+!accounts/**
+!monitoring/
+!monitoring/**
+!analytics/
+!analytics/**
+!api/
+!api/**
+!notifications/
+!notifications/**
+!dashboard/
+!dashboard/**
+!templates/
+!templates/**
+!static/
+!static/**
+# media/ is needed as a mounted volume in Compose, but local uploads must never
+# be baked into the image, so only the directory marker is included.
+!media/
+!media/**
+media/*
+!media/.gitkeep
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+db.sqlite3
+staticfiles

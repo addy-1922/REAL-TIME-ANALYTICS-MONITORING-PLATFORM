@@ -1,0 +1,75 @@
+{% extends "base_app.html" %}
+{% load dashboard_tags %}
+
+{% block title %}{{ project.name }} dashboard{% endblock %}
+{% block topbar_eyebrow %}Projects{% endblock %}
+{% block topbar_title %}{{ project.name }} dashboard{% endblock %}
+
+{% block content %}
+<div class="page-stack" data-realtime-project-id="{{ project.pk }}">
+  {{ data|json_script:"project-dashboard-data" }}
+  <header class="page-header">
+    <div><div class="eyebrow"><span class="status-dot is-connecting" data-connection-dot="project"></span>Live project dashboard</div><h1>{{ project.name }}</h1><p>Measured event outcomes and live error activity for this project.</p></div>
+    <div class="page-header__actions"><a class="btn btn-secondary" href="{% url 'monitoring:event_list' project.pk %}">Browse events</a><a class="btn btn-primary" href="{% url 'monitoring:alert_create' project.pk %}">Create alert</a></div>
+  </header>
+
+  <section class="metric-grid" aria-label="Project key metrics">
+    <article class="metric-card metric-card--primary"><div class="metric-card__top"><span class="metric-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/></svg></span><span class="metric-label">Total events</span></div><strong class="metric-value" data-live-kpi="total" data-value="{{ total_events }}">{{ total_events|intcomma }}</strong><span class="metric-meta">{{ events_today|intcomma }} recorded today</span></article>
+    <article class="metric-card"><div class="metric-card__top"><span class="metric-icon metric-icon--success"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span><span class="metric-label">Successful</span></div><strong class="metric-value" data-live-kpi="successes" data-value="{{ success_events }}">{{ success_events|intcomma }}</strong><span class="metric-meta">2xx and 3xx responses</span></article>
+    <article class="metric-card"><div class="metric-card__top"><span class="metric-icon metric-icon--danger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.6 2.4 17.5A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.5L13.7 3.6a2 2 0 0 0-3.4 0Z"/></svg></span><span class="metric-label">Errors</span></div><strong class="metric-value" data-live-kpi="errors" data-value="{{ error_events }}">{{ error_events|intcomma }}</strong><span class="metric-meta">4xx, 5xx and application errors</span></article>
+    <article class="metric-card"><div class="metric-card__top"><span class="metric-icon metric-icon--warning"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="metric-label">Slow events</span></div><strong class="metric-value" data-live-kpi="slow" data-value="{{ slow_events }}">{{ slow_events|intcomma }}</strong><span class="metric-meta">Above the configured response threshold</span></article>
+    <article class="metric-card"><div class="metric-card__top"><span class="metric-icon metric-icon--purple"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span><span class="metric-label">Avg response</span></div><strong class="metric-value" data-live-kpi="avg-response" data-value="{% if avg_response_time is not None %}{{ avg_response_time|floatformat:3 }}{% else %}{% endif %}">{% if avg_response_time is not None %}{{ avg_response_time|floatformat:0 }} ms{% else %}—{% endif %}</strong><span class="metric-meta">{% if p95_response_time is not None %}p95 {{ p95_response_time|floatformat:0 }} ms{% else %}No response samples yet{% endif %}</span></article>
+  </section>
+
+  <section class="dashboard-grid dashboard-grid--project" aria-label="Project analytics">
+    <article class="card chart-card chart-card--wide">
+      <div class="card__header"><div><span class="card__eyebrow">Outcomes</span><h2>Event outcomes</h2><p>Current success and error counts for {{ project.name }}.</p></div><div class="connection-chip"><span class="status-dot is-connecting" data-connection-dot="project"></span><span data-connection-status="project">Connecting</span></div></div>
+      {% if success_events or error_events %}
+      <div class="chart-container chart-container--doughnut chart-container--project">
+        <canvas data-chart="attribute-doughnut" data-chart-labels="Successful,Errors" data-chart-successes="{{ success_events }}" data-chart-errors="{{ error_events }}" aria-label="Doughnut chart of successful and error event counts" role="img">Outcome data: {{ success_events }} successful and {{ error_events }} error events.</canvas>
+      </div>
+      {% else %}
+      <div class="empty-state empty-state--chart"><span class="empty-state__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 4"/></svg></span><h3>No classified outcomes</h3><p>The chart appears after the project records successful or error events.</p></div>
+      {% endif %}
+    </article>
+    <article class="card chart-card">
+      <div class="card__header"><div><span class="card__eyebrow">Breakdown</span><h2>Event types</h2><p>Measured event type distribution for this project.</p></div></div>
+      {% if event_types %}
+      <div class="chart-container chart-container--doughnut">
+        <canvas data-chart="doughnut" data-chart-source="#project-dashboard-data" data-chart-group="event_types" aria-label="Doughnut chart of event type distribution" role="img">Event type data: {% for row in event_types %}{{ row.value }} {{ row.count }} events. {% endfor %}</canvas>
+      </div>
+      {% else %}
+      <div class="empty-state empty-state--chart"><span class="empty-state__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8m-8 4h5"/></svg></span><h3>No event types yet</h3><p>Event type distribution appears once events arrive.</p></div>
+      {% endif %}
+    </article>
+    <article class="card chart-card chart-card--wide">
+      <div class="card__header"><div><span class="card__eyebrow">Volume</span><h2>Events over time</h2><p>Hourly event volume with error and average response trends.</p></div></div>
+      {% if timeline %}
+      <div class="chart-container chart-container--timeline">
+        <canvas data-chart="timeline" data-chart-source="#project-dashboard-data" aria-label="Line chart of event volume, errors, and average response time over time" role="img">Timeline data available in the project dashboard payload.</canvas>
+      </div>
+      {% else %}
+      <div class="empty-state empty-state--chart"><span class="empty-state__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/></svg></span><h3>No timeline data</h3><p>The volume chart appears once events fall inside the reporting window.</p></div>
+      {% endif %}
+    </article>
+    <article class="card project-quickstart">
+      <div class="card__header"><div><span class="card__eyebrow">Workspace</span><h2>Project navigation</h2></div></div>
+      <nav aria-label="Project shortcuts"><a href="{% url 'monitoring:event_list' project.pk %}"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8m-8 4h5"/></svg>Event explorer</span><span aria-hidden="true">→</span></a><a href="{% url 'monitoring:alert_list' project.pk %}"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>Alert rules</span><span aria-hidden="true">→</span></a><a href="{% url 'monitoring:project_detail' project.pk %}"><span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>API configuration</span><span aria-hidden="true">→</span></a></nav>
+    </article>
+  </section>
+
+  <section class="card table-card" aria-labelledby="project-live-events-title" data-live-events-card data-event-url-template="{% url 'monitoring:event_detail' project.pk 0 %}">
+    <div class="card__header"><div><span class="card__eyebrow">Live feed</span><h2 id="project-live-events-title">Recent events</h2><p>New events appear here instantly as they arrive over the project stream.</p></div><span class="live-label"><span class="status-dot is-connecting" data-connection-dot="project"></span>Live</span></div>
+    {% if recent_events %}
+    <div class="table-wrap"><table class="data-table"><thead><tr><th scope="col">Event</th><th scope="col">Service</th><th scope="col">Environment</th><th scope="col">Status</th><th scope="col">Response</th><th scope="col">Time</th></tr></thead><tbody data-live-table-body>{% for event in recent_events %}<tr data-event-id="{{ event.pk }}"><td><a class="table-primary" href="{% url 'monitoring:event_detail' project.pk event.pk %}">{{ event.display_event_type }}</a><span class="table-secondary">#{{ event.pk }}</span></td><td>{{ event.service|default:"—" }}</td><td>{{ event.environment|default:"—" }}</td><td><span class="status-code status-code--{% if event.is_error %}danger{% elif event.is_success %}success{% else %}neutral{% endif %}">{{ event.status_code }}</span></td><td>{% if event.response_time is not None %}{{ event.response_time|intcomma }} ms{% else %}—{% endif %}</td><td><time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at }}</time></td></tr>{% endfor %}</tbody></table></div>
+    {% else %}
+    <div class="empty-state empty-state--compact" data-live-empty><span class="empty-state__icon empty-state__icon--success"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span><h3>No events yet</h3><p>New events will appear here without refreshing the page.</p></div>
+    {% endif %}
+  </section>
+
+  <section class="card" aria-labelledby="active-project-alerts-title">
+    <div class="card__header"><div><span class="card__eyebrow">Alerting</span><h2 id="active-project-alerts-title">Active alert rules</h2></div><a class="btn btn-secondary btn-sm" href="{% url 'monitoring:alert_create' project.pk %}">New rule</a></div>
+    {% if active_alerts %}<div class="alert-rule-list">{% for alert in active_alerts %}<a href="{% url 'monitoring:alert_list' project.pk %}"><span class="alert-rule-list__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></span><span><strong>{{ alert.name }}</strong><small>{{ alert.get_metric_display }} {{ alert.get_condition_display }} {{ alert.threshold }} · {{ alert.time_window_minutes }} min window</small></span><span class="badge badge-success">Active</span></a>{% endfor %}</div>{% else %}<div class="empty-inline empty-inline--card">No active alert rules. <a href="{% url 'monitoring:alert_create' project.pk %}">Create a rule</a>.</div>{% endif %}
+  </section>
+</div>
+{% endblock %}

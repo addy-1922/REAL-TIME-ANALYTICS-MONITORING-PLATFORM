@@ -1,0 +1,37 @@
+{% extends "base_app.html" %}
+{% load dashboard_tags %}
+
+{% block title %}Notifications{% endblock %}
+{% block topbar_eyebrow %}Account{% endblock %}
+{% block topbar_title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="page-stack page-stack--narrow" data-notification-history>
+  <header class="page-header">
+    <div><div class="eyebrow">Notification center</div><h1>Notifications</h1><p>Review account, project, error, and performance notifications in reverse chronological order.</p></div>
+    {% if unread_notification_count %}<form method="post" action="{% url 'notifications:mark_all_read' %}" data-confirm="Mark all notifications as read?">{% csrf_token %}<button class="btn btn-secondary" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 8 4 4 5-6m3 8 4 4 5-6"/></svg>Mark all as read</button></form>{% endif %}
+  </header>
+
+  <section class="notification-summary card">
+    <div><span class="notification-summary__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></span><span><strong>{{ unread_notification_count|intcomma }} unread notification{{ unread_notification_count|pluralize }}</strong><small>{{ notifications|length }} notification{{ notifications|length|pluralize }} in history</small></span></div>
+    <div class="connection-chip"><span class="status-dot is-connecting" data-connection-dot="notification"></span><span data-connection-status="notification">Connecting</span></div>
+  </section>
+
+  <section class="notification-history" aria-label="Notification history" data-notification-history-list>
+    {% for notification in notifications %}
+    <article class="notification-card{% if not notification.is_read %} is-unread{% endif %}" id="notification-{{ notification.pk }}" data-notification-id="{{ notification.pk }}">
+      <span class="notification-card__indicator" aria-hidden="true"></span>
+      <div class="notification-card__body">
+        <div class="notification-card__meta"><span class="badge {% if notification.notification_type == 'ERROR_ALERT' %}badge-danger{% elif notification.notification_type == 'PERFORMANCE_ALERT' %}badge-warning{% elif notification.notification_type == 'PROJECT' %}badge-primary{% else %}badge-neutral{% endif %}">{{ notification.get_notification_type_display }}</span>{% if not notification.is_read %}<span class="badge badge-info">Unread</span>{% endif %}<time datetime="{{ notification.created_at|date:'c' }}">{{ notification.created_at }}</time></div>
+        <h2>{{ notification.title }}</h2>
+        <p>{{ notification.message }}</p>
+        {% if notification.project %}<a class="text-link" href="{% url 'monitoring:project_detail' notification.project.pk %}">{{ notification.project.name }}</a>{% endif %}
+      </div>
+      <div class="notification-card__actions">{% if not notification.is_read %}<form method="post" action="{% url 'notifications:mark_read' notification.pk %}">{% csrf_token %}<button class="btn btn-sm btn-secondary" type="submit">Mark as read</button></form>{% else %}<span class="read-state"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Read</span>{% endif %}</div>
+    </article>
+    {% empty %}
+    <div class="card empty-state empty-state--page"><span class="empty-state__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></span><h2>No notifications yet</h2><p>Alert and account notifications will appear here as they are created.</p><a class="btn btn-secondary" href="{% url 'monitoring:project_list' %}">View projects</a></div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

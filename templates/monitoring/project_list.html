@@ -1,0 +1,44 @@
+{% extends "base_app.html" %}
+{% load dashboard_tags %}
+
+{% block title %}Projects{% endblock %}
+{% block topbar_eyebrow %}Workspace{% endblock %}
+{% block topbar_title %}Projects{% endblock %}
+
+{% block content %}
+<div class="page-stack">
+  <header class="page-header">
+    <div><div class="eyebrow">Workspace</div><h1>Projects</h1><p>Manage event sources, API credentials, alerts, and project health.</p></div>
+    <a class="btn btn-primary" href="{% url 'monitoring:project_create' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New project</a>
+  </header>
+
+  {% if projects %}
+  <section class="card table-card" aria-label="Projects">
+    <div class="table-wrap">
+      <table class="data-table project-table">
+        <thead><tr><th scope="col">Project</th><th scope="col">Events</th><th scope="col">API key</th><th scope="col">Status</th><th scope="col">Created</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          {% for project in projects %}
+          <tr>
+            <td><a class="project-cell" href="{% url 'monitoring:project_detail' project.pk %}"><span class="project-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 3h10l-2.5 7H6L3 7Z"/><path d="M8 7V4h8v3"/></svg></span><span><strong>{{ project.name }}</strong><small>{% if project.description %}{{ project.description|truncatechars:72 }}{% else %}No description{% endif %}</small></span></a></td>
+            <td><span class="table-number">{{ project.event_count|intcomma }}</span></td>
+            <td>{% if project.api_key_prefix %}<button class="copy-chip" type="button" data-copy-target="#project-key-{{ project.pk }}"><code id="project-key-{{ project.pk }}">{{ project.api_key_prefix }}••••••••</code><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span class="sr-only">Copy key prefix for {{ project.name }}</span></button>{% else %}<span class="badge badge-neutral">No key</span>{% endif %}</td>
+            <td>{% if project.is_active %}<span class="badge badge-success"><span class="status-dot is-online" aria-hidden="true"></span>Active</span>{% else %}<span class="badge badge-neutral">Inactive</span>{% endif %}</td>
+            <td><time datetime="{{ project.created_at|date:'c' }}">{{ project.created_at|date:"M j, Y" }}</time></td>
+            <td><div class="row-actions"><a class="btn btn-sm btn-secondary" href="{% url 'monitoring:project_dashboard' project.pk %}">Dashboard</a><a class="btn btn-sm btn-ghost" href="{% url 'monitoring:project_detail' project.pk %}">View</a></div></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "monitoring/_pagination.html" %}
+  </section>
+  {% else %}
+  <section class="card empty-state empty-state--page">
+    <span class="empty-state__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 3h10l-2.5 7H6L3 7Z"/><path d="M8 7V4h8v3"/></svg></span>
+    <h2>Create your first project</h2><p>Projects isolate event streams, API keys, alerts, and analytics for each environment or service.</p>
+    <a class="btn btn-primary" href="{% url 'monitoring:project_create' %}">Create project</a>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

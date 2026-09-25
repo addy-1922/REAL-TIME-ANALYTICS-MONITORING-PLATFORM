@@ -1,0 +1,28 @@
+{% extends "base_app.html" %}
+{% load dashboard_tags %}
+
+{% block title %}Activity{% endblock %}
+{% block topbar_eyebrow %}Workspace{% endblock %}
+{% block topbar_title %}Activity{% endblock %}
+
+{% block content %}
+<div class="page-stack">
+  <header class="page-header"><div><div class="eyebrow">Workspace history</div><h1>Activity</h1><p>Review project, event-source, and alert configuration changes associated with your account.</p></div></header>
+  <section class="card table-card" aria-label="Workspace activity">
+    <div class="card__header"><div><span class="card__eyebrow">Audit trail</span><h2>{% if is_paginated %}{{ page_obj.paginator.count|intcomma }} activity record{{ page_obj.paginator.count|pluralize }}{% else %}{{ activity_logs|length }} record{{ activity_logs|length|pluralize }}{% endif %}</h2><p>Newest activity appears first.</p></div></div>
+    {% if activity_logs %}
+    <div class="activity-list">
+      {% for log in activity_logs %}
+      <article class="activity-item">
+        <span class="activity-item__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <div class="activity-item__content"><div><span class="badge badge-neutral activity-action">{{ log.action }}</span><time datetime="{{ log.created_at|date:'c' }}">{{ log.created_at }}</time></div><p>{{ log.description|default:"No description was recorded." }}</p>{% if log.project %}<a href="{% url 'monitoring:project_detail' log.project.pk %}">{{ log.project.name }}</a>{% else %}<span class="muted">Workspace-level activity</span>{% endif %}</div>
+      </article>
+      {% endfor %}
+    </div>
+    {% include "monitoring/_pagination.html" %}
+    {% else %}
+    <div class="empty-state empty-state--page"><span class="empty-state__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span><h2>No activity yet</h2><p>Project and alert configuration changes will appear here.</p><a class="btn btn-secondary" href="{% url 'monitoring:project_list' %}">View projects</a></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

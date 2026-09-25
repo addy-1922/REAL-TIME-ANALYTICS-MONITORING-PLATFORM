@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Server error{% endblock %}
+
+{% block content %}
+<section class="error-page" aria-labelledby="error-title">
+  <span class="error-code">500</span>
+  <div class="error-page__icon error-page__icon--danger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.6 2.4 17.5A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.5L13.7 3.6a2 2 0 0 0-3.4 0Z"/></svg></div>
+  <h1 id="error-title">Something went wrong</h1>
+  <p>The request could not be completed. Please try again, or return to your overview while the issue is investigated.</p>
+  <div class="error-page__actions">
+    {% if user.is_authenticated %}<a class="btn btn-primary" href="{% url 'dashboard:overview' %}">Back to overview</a>{% else %}<a class="btn btn-primary" href="{% url 'accounts:login' %}">Back to sign in</a>{% endif %}
+    <button class="btn btn-secondary" type="button" data-reload-page>Try again</button>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base_app.html" %}
+
+{% block title %}New alert · {{ project.name }}{% endblock %}
+{% block topbar_eyebrow %}Alerting{% endblock %}
+{% block topbar_title %}New alert rule{% endblock %}
+
+{% block content %}
+<div class="page-stack page-stack--form">
+  <header class="page-header"><div><div class="eyebrow">{{ project.name }}</div><h1>Create an alert rule</h1><p>Choose a measured metric, trigger condition, and notification cadence.</p></div></header>
+  <section class="card form-card">
+    <form method="post" action="{% url 'monitoring:alert_create' project.pk %}" class="stacked-form" data-loading-form>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="form-alert" role="alert">{% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+      {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+      <div class="form-section">
+        <div class="form-section__heading"><h2>Rule definition</h2><p>Give the rule a recognizable name and select the metric to evaluate.</p></div>
+        <div class="form-section--grid">
+          {% for field in form.visible_fields %}
+          {% if field.name == 'name' or field.name == 'metric' or field.name == 'condition' %}
+          <div class="form-field{% if field.errors %} has-error{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>{{ field }}{% if field.help_text %}<div class="form-help">{{ field.help_text }}</div>{% endif %}{% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section__heading"><h2>Trigger and timing</h2><p>Set the value that triggers the alert and how often it can notify you.</p></div>
+        <div class="form-section--grid">
+          {% for field in form.visible_fields %}
+          {% if field.name != 'name' and field.name != 'metric' and field.name != 'condition' and field.name != 'is_active' %}
+          <div class="form-field{% if field.errors %} has-error{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>{{ field }}{% if field.help_text %}<div class="form-help">{{ field.help_text }}</div>{% endif %}{% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      <div class="toggle-field">
+        <div><strong>Enable immediately</strong><p>Start evaluating this rule after it is created.</p></div>
+        {% for field in form.visible_fields %}{% if field.name == 'is_active' %}<label class="switch">{{ field }}<span class="switch__track"><span class="switch__thumb"></span></span><span class="sr-only">{{ field.label }}</span></label>{% endif %}{% endfor %}
+      </div>
+      <div class="form-actions form-actions--card"><a class="btn btn-secondary" href="{% url 'monitoring:alert_list' project.pk %}">Cancel</a><button class="btn btn-primary" type="submit"><span>Create rule</span><span class="button-loader" aria-hidden="true"></span></button></div>
+    </form>
+  </section>
+</div>
+{% endblock %}

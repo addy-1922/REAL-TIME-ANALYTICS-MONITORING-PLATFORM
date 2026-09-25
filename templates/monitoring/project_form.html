@@ -1,0 +1,28 @@
+{% extends "base_app.html" %}
+
+{% block title %}{% if form.instance.pk %}Edit project{% else %}Create project{% endif %}{% endblock %}
+{% block topbar_eyebrow %}Projects{% endblock %}
+{% block topbar_title %}{% if form.instance.pk %}Edit project{% else %}Create project{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-stack page-stack--form">
+  <header class="page-header"><div><div class="eyebrow">{% if form.instance.pk %}Project settings{% else %}New workspace resource{% endif %}</div><h1>{% if form.instance.pk %}Edit {{ form.instance.name }}{% else %}Create a project{% endif %}</h1><p>{% if form.instance.pk %}Update the project’s name and description.{% else %}Choose a clear name for the service or environment you’ll monitor.{% endif %}</p></div></header>
+  <section class="card form-card">
+    <form method="post" class="stacked-form" data-loading-form>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="form-alert" role="alert">{% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+      {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+      {% for field in form.visible_fields %}
+      <div class="form-field{% if field.errors %} has-error{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>
+        {{ field }}
+        {% if field.help_text %}<div class="form-help">{{ field.help_text }}</div>{% endif %}
+        {% for error in field.errors %}<div class="field-error" role="alert">{{ error }}</div>{% endfor %}
+      </div>
+      {% endfor %}
+      <div class="form-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>{% if form.instance.pk %}Your API key is not changed by this form.{% else %}A unique API key will be generated after you save the project.{% endif %}</div>
+      <div class="form-actions form-actions--card"><a class="btn btn-secondary" href="{% if form.instance.pk %}{% url 'monitoring:project_detail' form.instance.pk %}{% else %}{% url 'monitoring:project_list' %}{% endif %}">Cancel</a><button class="btn btn-primary" type="submit"><span>{% if form.instance.pk %}Save changes{% else %}Create project{% endif %}</span><span class="button-loader" aria-hidden="true"></span></button></div>
+    </form>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,304 @@
+services:
+  - type: web
+    name: signalwatch-web
+    runtime: python
+    plan: starter
+    region: oregon
+    numInstances: 1
+    buildCommand: pip install --no-cache-dir -r requirements.txt && python manage.py collectstatic --noinput
+    preDeployCommand: python manage.py migrate --noinput
+    startCommand: uvicorn config.asgi:application --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
+    healthCheckPath: /health/
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+      - key: DB_NAME
+        fromDatabase:
+          name: signalwatch-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: signalwatch-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: signalwatch-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: signalwatch-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: signalwatch-db
+          property: port
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: signalwatch-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: signalwatch-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: signalwatch-redis
+          property: connectionString
+      - key: SLOW_REQUEST_THRESHOLD
+        value: "1000"
+      - key: EVENT_RETENTION_DAYS
+        value: "90"
+      - key: ANALYTICS_CACHE_TTL
+        value: "30"
+      - key: ERROR_SPIKE_THRESHOLD
+        value: "5"
+      - key: ERROR_SPIKE_MULTIPLIER
+        value: "3"
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.console.EmailBackend
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
+
+  - type: worker
+    name: signalwatch-worker
+    runtime: python
+    plan: starter
+    region: oregon
+    numInstances: 1
+    buildCommand: pip install --no-cache-dir -r requirements.txt
+    startCommand: celery -A config worker --loglevel=INFO
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: SECRET_KEY
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: ALLOWED_HOSTS
+      - key: CSRF_TRUSTED_ORIGINS
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: CSRF_TRUSTED_ORIGINS
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+      - key: DB_NAME
+        fromDatabase:
+          name: signalwatch-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: signalwatch-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: signalwatch-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: signalwatch-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: signalwatch-db
+          property: port
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: signalwatch-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: signalwatch-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: signalwatch-redis
+          property: connectionString
+      - key: SLOW_REQUEST_THRESHOLD
+        value: "1000"
+      - key: EVENT_RETENTION_DAYS
+        value: "90"
+      - key: ANALYTICS_CACHE_TTL
+        value: "30"
+      - key: ERROR_SPIKE_THRESHOLD
+        value: "5"
+      - key: ERROR_SPIKE_MULTIPLIER
+        value: "3"
+      - key: EMAIL_BACKEND
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_BACKEND
+      - key: EMAIL_HOST
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_HOST
+      - key: EMAIL_PORT
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_PORT
+      - key: EMAIL_HOST_USER
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_HOST_USER
+      - key: EMAIL_HOST_PASSWORD
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_HOST_PASSWORD
+      - key: EMAIL_USE_TLS
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_USE_TLS
+      - key: DEFAULT_FROM_EMAIL
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: DEFAULT_FROM_EMAIL
+      - key: LOG_LEVEL
+        value: INFO
+
+  - type: worker
+    name: signalwatch-beat
+    runtime: python
+    plan: starter
+    region: oregon
+    numInstances: 1
+    buildCommand: pip install --no-cache-dir -r requirements.txt
+    startCommand: celery -A config beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: SECRET_KEY
+      - key: DEBUG
+        value: "False"
+      - key: DB_NAME
+        fromDatabase:
+          name: signalwatch-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: signalwatch-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: signalwatch-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: signalwatch-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: signalwatch-db
+          property: port
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: signalwatch-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: signalwatch-redis
+          property: connectionString
+      - key: EVENT_RETENTION_DAYS
+        value: "90"
+      - key: ERROR_SPIKE_THRESHOLD
+        value: "5"
+      - key: ERROR_SPIKE_MULTIPLIER
+        value: "3"
+      - key: EMAIL_BACKEND
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_BACKEND
+      - key: EMAIL_HOST
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_HOST
+      - key: EMAIL_PORT
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_PORT
+      - key: EMAIL_HOST_USER
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_HOST_USER
+      - key: EMAIL_HOST_PASSWORD
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_HOST_PASSWORD
+      - key: EMAIL_USE_TLS
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: EMAIL_USE_TLS
+      - key: DEFAULT_FROM_EMAIL
+        fromService:
+          type: web
+          name: signalwatch-web
+          environmentVariableKey: DEFAULT_FROM_EMAIL
+      - key: LOG_LEVEL
+        value: INFO
+
+  - type: keyvalue
+    name: signalwatch-redis
+    plan: starter
+    region: oregon
+    ipAllowList: []
+
+databases:
+  - name: signalwatch-db
+    plan: basic-256mb
+    region: oregon
+    databaseName: signalwatch
+    user: signalwatch
+    ipAllowList: []

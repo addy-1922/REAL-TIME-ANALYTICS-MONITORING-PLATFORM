@@ -1,0 +1,15 @@
+Django==5.2.5
+djangorestframework==3.16.1
+django-filter==25.1
+channels==4.3.1
+channels-redis==4.3.0
+celery[redis]==5.5.3
+redis==6.4.0
+django-redis==6.0.0
+psycopg[binary]==3.2.9
+python-dotenv==1.1.1
+whitenoise==6.9.0
+gunicorn==23.0.0
+uvicorn[standard]==0.35.0
+drf-spectacular==0.28.0
+Pillow==11.3.0

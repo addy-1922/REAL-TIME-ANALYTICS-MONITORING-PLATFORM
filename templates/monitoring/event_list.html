@@ -1,0 +1,69 @@
+{% extends "base_app.html" %}
+{% load dashboard_tags %}
+
+{% block title %}Events · {{ project.name }}{% endblock %}
+{% block topbar_eyebrow %}{{ project.name }}{% endblock %}
+{% block topbar_title %}Events{% endblock %}
+
+{% block content %}
+<div class="page-stack">
+  <header class="page-header">
+    <div><div class="eyebrow">Event explorer</div><h1>Events</h1><p>Search, filter, inspect, and export events received for <strong>{{ project.name }}</strong>.</p></div>
+    <div class="page-header__actions"><a class="btn btn-secondary" href="{% url 'monitoring:project_dashboard' project.pk %}">Dashboard</a><a class="btn btn-primary" href="{% url 'monitoring:event_export' project.pk %}?{{ request.GET.urlencode }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 19h14"/></svg>Export CSV</a></div>
+  </header>
+
+  <nav class="tab-nav" aria-label="Project navigation">
+    <a href="{% url 'monitoring:project_detail' project.pk %}">Overview</a>
+    <a class="is-active" href="{% url 'monitoring:event_list' project.pk %}" aria-current="page">Events</a>
+    <a href="{% url 'monitoring:alert_list' project.pk %}">Alerts</a>
+  </nav>
+
+  <form method="get" class="filter-panel" aria-label="Event filters">
+    <details {% if request.GET %}open{% endif %}>
+      <summary><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7L4 5Z"/></svg>Filter events</span>{% if request.GET %}<span class="badge badge-primary">Filters applied</span>{% endif %}</summary>
+      <div class="filter-panel__body">
+        {% if filter_form.non_field_errors %}<div class="form-alert" role="alert">{% for error in filter_form.non_field_errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+        <div class="filter-grid filter-grid--events">
+          {% for field in filter_form.visible_fields %}
+          <div class="form-field{% if field.errors %} has-error{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<div class="form-help">{{ field.help_text }}</div>{% endif %}{% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>
+          {% endfor %}
+        </div>
+        <div class="filter-panel__actions"><a class="btn btn-ghost" href="{% url 'monitoring:event_list' project.pk %}">Clear all</a><button class="btn btn-primary" type="submit">Apply filters</button></div>
+      </div>
+    </details>
+  </form>
+
+  <section class="card table-card" aria-label="Event results">
+    <div class="card__header"><div><span class="card__eyebrow">Results</span><h2>{% if is_paginated %}{{ page_obj.paginator.count|intcomma }} matching event{{ page_obj.paginator.count|pluralize }}{% else %}{{ events|length }} event{{ events|length|pluralize }}{% endif %}</h2><p>Newest events appear first. Filters are preserved in exports and pagination.</p></div>{% if request.GET %}<a class="btn btn-secondary btn-sm" href="{% url 'monitoring:event_export' project.pk %}?{{ request.GET.urlencode }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 19h14"/></svg>Export filtered CSV</a>{% endif %}</div>
+    {% if events %}
+    <div class="table-wrap">
+      <table class="data-table event-table">
+        <thead><tr><th scope="col">ID</th><th scope="col">Event</th><th scope="col">Service</th><th scope="col">Environment</th><th scope="col">Status</th><th scope="col">Response</th><th scope="col">Result</th><th scope="col">Time</th></tr></thead>
+        <tbody>
+          {% for event in events %}
+          <tr>
+            <td><a class="event-id" href="{% url 'monitoring:event_detail' project.pk event.pk %}">#{{ event.id }}</a></td>
+            <td><a class="table-primary" href="{% url 'monitoring:event_detail' project.pk event.pk %}">{{ event.display_event_type }}</a>{% if event.message %}<span class="table-secondary table-secondary--truncated" title="{{ event.message }}">{{ event.message }}</span>{% endif %}</td>
+            <td>{{ event.service|default:"—" }}</td>
+            <td>{% if event.environment %}<span class="badge badge-neutral">{{ event.environment }}</span>{% else %}—{% endif %}</td>
+            <td><span class="status-code status-code--{% if event.status_code >= 500 %}danger{% elif event.status_code >= 400 %}warning{% else %}success{% endif %}">{{ event.status_code }}</span></td>
+            <td>{% if event.response_time is not None %}<span class="{% if event.is_slow %}text-warning{% endif %}">{{ event.response_time|intcomma }} ms{% if event.is_slow %} · slow{% endif %}</span>{% else %}—{% endif %}</td>
+            <td>{% if event.is_error %}<span class="badge badge-danger">Error</span>{% elif event.is_success %}<span class="badge badge-success">Success</span>{% else %}<span class="badge badge-neutral">Other</span>{% endif %}</td>
+            <td><time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at }}</time></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "monitoring/_pagination.html" %}
+    {% else %}
+    <div class="empty-state empty-state--page">
+      <span class="empty-state__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8m-8 4h5"/></svg></span>
+      <h2>{% if request.GET %}No matching events{% else %}No events received{% endif %}</h2>
+      <p>{% if request.GET %}Try removing one or more filters to broaden the results.{% else %}Events sent with this project’s API key will appear in this explorer.{% endif %}</p>
+      {% if request.GET %}<a class="btn btn-secondary" href="{% url 'monitoring:event_list' project.pk %}">Clear filters</a>{% else %}<a class="btn btn-secondary" href="{% url 'monitoring:project_detail' project.pk %}">View project setup</a>{% endif %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

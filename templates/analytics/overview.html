@@ -1,0 +1,76 @@
+{% extends "base_app.html" %}
+{% load dashboard_tags %}
+
+{% block title %}Analytics overview{% endblock %}
+{% block topbar_eyebrow %}Analytics{% endblock %}
+{% block topbar_title %}Overview{% endblock %}
+
+{% block content %}
+<div class="page-stack">
+  <header class="page-header">
+    <div><div class="eyebrow">Measured analytics</div><h1>Analytics overview</h1><p>Event volume, outcomes, and response performance across your accessible projects.</p></div>
+    <div class="page-header__actions"><a class="btn btn-secondary" href="{% url 'analytics:error_monitoring' %}">Errors</a><a class="btn btn-secondary" href="{% url 'analytics:slow_requests' %}">Slow requests</a></div>
+  </header>
+
+  {{ data|json_script:"analytics-overview-data" }}
+
+  <form method="get" class="filter-panel" aria-label="Analytics filters">
+    <details {% if form.data %}open{% endif %}>
+      <summary><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7L4 5Z"/></svg>Analytics filters</span>{% if form.data %}<span class="badge badge-primary">Active</span>{% endif %}</summary>
+      <div class="filter-panel__body">
+        {% if form.non_field_errors %}<div class="form-alert" role="alert">{% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+        <div class="filter-grid filter-grid--analytics">
+          <div class="form-field"><label for="{{ form.project.id_for_label }}">Project</label>{{ form.project }}{% for error in form.project.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+          <div class="form-field"><label for="{{ form.date_from.id_for_label }}">From date</label>{{ form.date_from }}{% for error in form.date_from.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+          <div class="form-field"><label for="{{ form.date_to.id_for_label }}">To date</label>{{ form.date_to }}{% for error in form.date_to.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+          <div class="form-field"><label for="{{ form.event_type.id_for_label }}">Event type</label>{{ form.event_type }}{% for error in form.event_type.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+          <div class="form-field"><label for="{{ form.service.id_for_label }}">Service</label>{{ form.service }}{% for error in form.service.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+          <div class="form-field"><label for="{{ form.environment.id_for_label }}">Environment</label>{{ form.environment }}{% for error in form.environment.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+          <div class="form-field"><label for="{{ form.status_code.id_for_label }}">Status code</label>{{ form.status_code }}{% for error in form.status_code.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+          <div class="form-field"><label for="{{ form.search.id_for_label }}">Search</label>{{ form.search }}{% for error in form.search.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+        </div>
+        <div class="filter-panel__actions"><a class="btn btn-ghost" href="{% url 'analytics:overview' %}">Reset filters</a><button class="btn btn-primary" type="submit">Apply filters</button></div>
+      </div>
+    </details>
+  </form>
+
+  <section class="metric-grid" aria-label="Analytics summary">
+    <article class="metric-card metric-card--primary"><div class="metric-card__top"><span class="metric-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/></svg></span><span class="metric-label">Total events</span></div><strong class="metric-value">{{ overview.total|intcomma }}</strong><span class="metric-meta">{{ overview.today|intcomma }} today · {{ overview.week|intcomma }} this week</span></article>
+    <article class="metric-card"><div class="metric-card__top"><span class="metric-icon metric-icon--success"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span><span class="metric-label">Successes</span></div><strong class="metric-value">{{ overview.successes|intcomma }}</strong><span class="metric-meta">Measured successful events</span></article>
+    <article class="metric-card"><div class="metric-card__top"><span class="metric-icon metric-icon--danger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.6 2.4 17.5A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.5L13.7 3.6a2 2 0 0 0-3.4 0Z"/></svg></span><span class="metric-label">Errors</span></div><strong class="metric-value">{{ overview.errors|intcomma }}</strong><span class="metric-meta metric-meta--danger">{{ overview.error_rate|floatformat:2 }}% error rate</span></article>
+    <article class="metric-card"><div class="metric-card__top"><span class="metric-icon metric-icon--warning"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="metric-label">Avg response</span></div><strong class="metric-value">{% if overview.avg_response_time is not None %}{{ overview.avg_response_time|floatformat:0 }} ms{% else %}—{% endif %}</strong><span class="metric-meta">p95 {% if overview.p95_response_time is not None %}{{ overview.p95_response_time|floatformat:0 }} ms{% else %}—{% endif %}</span></article>
+    <article class="metric-card"><div class="metric-card__top"><span class="metric-icon metric-icon--purple"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V8m5 10V4m5 14v-6m5 6V6"/></svg></span><span class="metric-label">p50 response</span></div><strong class="metric-value">{% if overview.p50_response_time is not None %}{{ overview.p50_response_time|floatformat:0 }} ms{% else %}—{% endif %}</strong><span class="metric-meta">Median measured latency</span></article>
+    <article class="metric-card"><div class="metric-card__top"><span class="metric-icon metric-icon--blue"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span><span class="metric-label">p99 response</span></div><strong class="metric-value">{% if overview.p99_response_time is not None %}{{ overview.p99_response_time|floatformat:0 }} ms{% else %}—{% endif %}</strong><span class="metric-meta">Upper-tail latency</span></article>
+  </section>
+
+  {% if timeline %}
+  <section class="card chart-card">
+    <div class="card__header"><div><span class="card__eyebrow">Timeline</span><h2>Volume, outcomes, and latency</h2><p>Hourly buckets calculated from the filtered event set.</p></div></div>
+    <div class="chart-container chart-container--large"><canvas data-chart="timeline" data-chart-source="#analytics-overview-data" aria-label="Line chart of analytics timeline" role="img">Analytics timeline data is available in the page source.</canvas></div>
+    <details class="data-disclosure"><summary>View timeline data table</summary><div class="table-wrap"><table class="data-table"><thead><tr><th scope="col">Bucket</th><th scope="col">Total</th><th scope="col">Errors</th><th scope="col">Successes</th><th scope="col">Avg response</th></tr></thead><tbody>{% for point in timeline %}<tr><td><time datetime="{{ point.timestamp|date:'c' }}">{{ point.timestamp }}</time></td><td>{{ point.total|intcomma }}</td><td>{{ point.errors|intcomma }}</td><td>{{ point.successes|intcomma }}</td><td>{% if point.avg_response_time is not None %}{{ point.avg_response_time|floatformat:2 }} ms{% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table></div></details>
+  </section>
+  {% else %}
+  <section class="card empty-state empty-state--page"><span class="empty-state__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/></svg></span><h2>No analytics in this range</h2><p>Adjust the date range or filters to include measured events.</p></section>
+  {% endif %}
+
+  <section class="dashboard-grid dashboard-grid--charts" aria-label="Analytics breakdowns">
+    <article class="card chart-card">
+      <div class="card__header"><div><span class="card__eyebrow">Composition</span><h2>Event types</h2></div></div>
+      {% if event_types %}<div class="chart-container chart-container--doughnut"><canvas data-chart="doughnut" data-chart-source="#analytics-overview-data" data-chart-group="event_types" aria-label="Doughnut chart of event type counts" role="img">Event type data is available in the page source.</canvas></div>{% else %}<div class="empty-state empty-state--chart"><h3>No event type data</h3><p>No events match the current filters.</p></div>{% endif %}
+    </article>
+    <article class="card">
+      <div class="card__header"><div><span class="card__eyebrow">Breakdown</span><h2>Services</h2></div></div>
+      <div class="ranking-list">{% for item in services %}<div class="ranking-item"><span><strong>{{ item.value|default:"Unspecified" }}</strong><small>{{ item.count|intcomma }} events</small></span><progress max="{% if overview.total %}{{ overview.total }}{% else %}{{ item.count }}{% endif %}" value="{{ item.count }}">{{ item.count }}</progress></div>{% empty %}<div class="empty-inline">No service data for the current filters.</div>{% endfor %}</div>
+    </article>
+    <article class="card">
+      <div class="card__header"><div><span class="card__eyebrow">Breakdown</span><h2>Environments</h2></div></div>
+      <div class="ranking-list">{% for item in environments %}<div class="ranking-item"><span><strong>{{ item.value|default:"Unspecified" }}</strong><small>{{ item.count|intcomma }} events</small></span><progress max="{% if overview.total %}{{ overview.total }}{% else %}{{ item.count }}{% endif %}" value="{{ item.count }}">{{ item.count }}</progress></div>{% empty %}<div class="empty-inline">No environment data for the current filters.</div>{% endfor %}</div>
+    </article>
+  </section>
+
+  <details class="data-disclosure card">
+    <summary><span><strong>Status code distribution</strong><small>Measured response outcomes</small></span><span class="badge badge-neutral">{{ status_codes|length }} group{{ status_codes|length|pluralize }}</span></summary>
+    <div class="status-code-grid">{% for item in status_codes %}<div><span>HTTP {{ item.value }}</span><strong>{{ item.count|intcomma }}</strong></div>{% empty %}<div class="empty-inline">No status code data for the current filters.</div>{% endfor %}</div>
+  </details>
+</div>
+{% endblock %}

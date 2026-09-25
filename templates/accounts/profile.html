@@ -1,0 +1,44 @@
+{% extends "base_app.html" %}
+
+{% block title %}Profile{% endblock %}
+{% block topbar_eyebrow %}Account{% endblock %}
+{% block topbar_title %}Profile{% endblock %}
+
+{% block content %}
+<div class="page-stack page-stack--narrow">
+  <header class="page-header">
+    <div><div class="eyebrow">Personal settings</div><h1>Your profile</h1><p>Manage the details associated with your SignalWatch account.</p></div>
+    <div class="page-header__actions"><a class="btn btn-secondary" href="{% url 'accounts:password_change' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Change password</a><a class="btn btn-primary" href="{% url 'accounts:profile_edit' %}">Edit profile</a></div>
+  </header>
+
+  <section class="profile-hero card">
+    <div class="profile-hero__avatar">
+      {% if profile.avatar %}<img src="{{ profile.avatar.url }}" alt="{{ user.get_username }} profile picture" width="112" height="112">{% else %}<span aria-hidden="true">{{ user.get_username|slice:':1'|upper }}</span>{% endif %}
+    </div>
+    <div class="profile-hero__content">
+      <span class="badge badge-primary">Account owner</span>
+      <h2>{{ user.get_username }}</h2>
+      <p>{% if profile.job_title %}{{ profile.job_title }}{% else %}{{ user.email|default:"Monitoring workspace member" }}{% endif %}</p>
+      {% if profile.bio %}<div class="profile-bio">{{ profile.bio|linebreaksbr }}</div>{% else %}<p class="muted">Add a short bio to help your team understand your role.</p>{% endif %}
+    </div>
+    <a class="btn btn-secondary" href="{% url 'accounts:profile_edit' %}">Edit details</a>
+  </section>
+
+  <div class="two-column-grid">
+    <section class="card" aria-labelledby="account-details-title">
+      <div class="card__header"><div><span class="card__eyebrow">Account</span><h2 id="account-details-title">Account details</h2></div></div>
+      <dl class="detail-list">
+        <div><dt>Username</dt><dd>{{ user.get_username }}</dd></div>
+        <div><dt>Email</dt><dd>{% if user.email %}{{ user.email }}{% else %}<span class="muted">Not provided</span>{% endif %}</dd></div>
+        <div><dt>Timezone</dt><dd>{{ profile.timezone }}</dd></div>
+        <div><dt>Daily report</dt><dd>{% if profile.daily_report_enabled %}<span class="badge badge-success">Enabled</span>{% else %}<span class="badge badge-neutral">Disabled</span>{% endif %}</dd></div>
+      </dl>
+    </section>
+    <section class="card" aria-labelledby="security-title">
+      <div class="card__header"><div><span class="card__eyebrow">Security</span><h2 id="security-title">Sign-in security</h2></div></div>
+      <div class="security-callout"><span class="security-callout__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.4 8 8 9 4.6-1 8-4 8-9V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg></span><div><strong>Password</strong><p>Update your password regularly and use a unique credential for this account.</p></div></div>
+      <a class="btn btn-secondary btn-block" href="{% url 'accounts:password_change' %}">Change password</a>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base_auth.html" %}
+
+{% block title %}Create account{% endblock %}
+
+{% block content %}
+<section class="auth-card auth-card--wide" aria-labelledby="register-title">
+  <div class="auth-card__header"><span class="auth-card__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><h1 id="register-title">Create your workspace account</h1><p>Start monitoring your first project in minutes.</p></div>
+  <form method="post" class="auth-form" data-loading-form>
+    {% csrf_token %}
+    {% include "registration/_form_fields.html" %}
+    <button class="btn btn-primary btn-block" type="submit"><span>Create account</span><span class="button-loader" aria-hidden="true"></span></button>
+  </form>
+  <div class="auth-card__links"><span>Already have an account? <a href="{% url 'accounts:login' %}">Sign in</a></span></div>
+</section>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base_app.html" %}
+
+{% block title %}Delete {{ project.name }}{% endblock %}
+{% block topbar_eyebrow %}Projects{% endblock %}
+{% block topbar_title %}Delete project{% endblock %}
+
+{% block content %}
+<section class="confirmation-card card" aria-labelledby="delete-project-title">
+  <div class="confirmation-card__icon confirmation-card__icon--danger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16m-10 4v6m4-6v6M9 7V4h6v3m-9 0 1 14h10l1-14"/></svg></div>
+  <span class="card__eyebrow">Permanent action</span>
+  <h1 id="delete-project-title">Delete “{{ project.name }}”?</h1>
+  <p>This permanently removes the project and its events, alert rules, triggers, and project activity history. This action cannot be undone.</p>
+  <div class="deletion-summary"><span>Project ID <strong>#{{ project.pk }}</strong></span><span>API key <strong>Immediately revoked</strong></span></div>
+  <form method="post" class="form-actions form-actions--center" data-confirm="Delete {{ project.name }} and all of its monitoring data?">
+    {% csrf_token %}
+    <a class="btn btn-secondary" href="{% url 'monitoring:project_detail' project.pk %}">Cancel</a>
+    <button class="btn btn-danger" type="submit">Delete project</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base_app.html" %}
+{% load dashboard_tags %}
+
+{% block title %}{{ project.name }}{% endblock %}
+{% block topbar_eyebrow %}Projects{% endblock %}
+{% block topbar_title %}{{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="page-stack" data-realtime-project-id="{{ project.pk }}">
+  <header class="project-header">
+    <div class="project-header__identity"><span class="project-header__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 3h10l-2.5 7H6L3 7Z"/><path d="M8 7V4h8v3"/></svg></span><div><div class="eyebrow">Project</div><h1>{{ project.name }}</h1><p>{{ project.description|default:"No project description has been added." }}</p></div></div>
+    <div class="project-header__actions"><span class="badge {% if project.is_active %}badge-success{% else %}badge-neutral{% endif %}">{% if project.is_active %}Active{% else %}Inactive{% endif %}</span><a class="btn btn-secondary" href="{% url 'monitoring:project_edit' project.pk %}">Edit</a><a class="btn btn-primary" href="{% url 'monitoring:project_dashboard' project.pk %}">Open dashboard</a></div>
+  </header>
+
+  <nav class="tab-nav" aria-label="Project navigation">
+    <a class="is-active" href="{% url 'monitoring:project_detail' project.pk %}" aria-current="page">Overview</a>
+    <a href="{% url 'monitoring:project_dashboard' project.pk %}">Dashboard</a>
+    <a href="{% url 'monitoring:event_list' project.pk %}">Events</a>
+    <a href="{% url 'monitoring:alert_list' project.pk %}">Alerts</a>
+  </nav>
+
+  {% if generated_key %}
+  <section class="secret-card" aria-labelledby="generated-key-title">
+    <div class="secret-card__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+    <div class="secret-card__content"><span class="card__eyebrow">Shown once</span><h2 id="generated-key-title">Your API key is ready</h2><p>Copy it now. SignalWatch stores only a secure hash and cannot display this key again.</p><div class="secret-value"><code id="generated-api-key">{{ generated_key }}</code><button class="btn btn-secondary" type="button" data-copy-target="#generated-api-key"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy key</button></div></div>
+  </section>
+  {% endif %}
+
+  <section class="metric-grid metric-grid--compact" aria-label="Project summary">
+    <article class="metric-card"><span class="metric-label">Total events</span><strong class="metric-value">{{ event_count|intcomma }}</strong><a class="metric-link" href="{% url 'monitoring:event_list' project.pk %}">View events <span aria-hidden="true">→</span></a></article>
+    <article class="metric-card"><span class="metric-label">Created</span><strong class="metric-value metric-value--small">{{ project.created_at|date:"M j, Y" }}</strong><span class="metric-meta">Updated {{ project.updated_at|date:"M j, Y" }}</span></article>
+    <article class="metric-card"><span class="metric-label">Active alerts</span><strong class="metric-value">{{ project.alert_rules.count }}</strong><a class="metric-link" href="{% url 'monitoring:alert_list' project.pk %}">Manage rules <span aria-hidden="true">→</span></a></article>
+    <article class="metric-card"><span class="metric-label">API status</span><strong class="metric-value metric-value--small">{% if project.api_key_prefix %}Configured{% else %}Not configured{% endif %}</strong><span class="metric-meta">{% if project.is_active %}Accepting authenticated events{% else %}Project is inactive{% endif %}</span></article>
+  </section>
+
+  <div class="two-column-grid two-column-grid--wide">
+    <section class="card table-card" aria-labelledby="project-events-title">
+      <div class="card__header"><div><span class="card__eyebrow">Latest activity</span><h2 id="project-events-title">Recent events</h2></div><a class="text-link" href="{% url 'monitoring:event_list' project.pk %}">View all <span aria-hidden="true">→</span></a></div>
+      {% if recent_events %}
+      <div class="table-wrap"><table class="data-table"><thead><tr><th scope="col">Event</th><th scope="col">Service</th><th scope="col">Status</th><th scope="col">Time</th></tr></thead><tbody>{% for event in recent_events %}<tr><td><a class="table-primary" href="{% url 'monitoring:event_detail' project.pk event.pk %}">{{ event.display_event_type }}</a><span class="table-secondary">#{{ event.pk }}</span></td><td>{{ event.service|default:"—" }}</td><td><span class="status-code status-code--{% if event.is_error %}danger{% elif event.is_success %}success{% else %}neutral{% endif %}">{{ event.status_code }}</span></td><td><time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at }}</time></td></tr>{% endfor %}</tbody></table></div>
+      {% else %}
+      <div class="empty-state empty-state--compact"><span class="empty-state__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8m-8 4h5"/></svg></span><h3>No events received</h3><p>Events appear here after your source sends the first event.</p><a class="btn btn-secondary" href="{% url 'monitoring:project_detail' project.pk %}#api-key">View API key</a></div>
+      {% endif %}
+    </section>
+
+    <section class="card" aria-labelledby="project-settings-title">
+      <div class="card__header"><div><span class="card__eyebrow">Configuration</span><h2 id="project-settings-title">Project details</h2></div></div>
+      <dl class="detail-list">
+        <div><dt>API key prefix</dt><dd>{% if project.api_key_prefix %}<button class="copy-chip" type="button" data-copy-target="#detail-key-prefix"><code id="detail-key-prefix">{{ project.api_key_prefix }}</code><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span class="sr-only">Copy API key prefix</span></button>{% else %}<span class="muted">No key generated</span>{% endif %}</dd></div>
+        <div><dt>Project ID</dt><dd><code>#{{ project.pk }}</code></dd></div>
+        <div><dt>Status</dt><dd>{% if project.is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-neutral">Inactive</span>{% endif %}</dd></div>
+        <div><dt>Last updated</dt><dd>{{ project.updated_at }}</dd></div>
+      </dl>
+      <div class="card-actions"><form method="post" action="{% url 'monitoring:project_regenerate_key' project.pk %}" data-confirm="Regenerate the API key? The current key will stop working immediately.">{% csrf_token %}<button class="btn btn-secondary" type="submit">Regenerate API key</button></form><a class="btn btn-danger-ghost" href="{% url 'monitoring:project_delete' project.pk %}">Delete project</a></div>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="project-alerts-title">
+    <div class="card__header"><div><span class="card__eyebrow">Alerting</span><h2 id="project-alerts-title">Active alert rules</h2></div><a class="btn btn-secondary btn-sm" href="{% url 'monitoring:alert_create' project.pk %}">Create alert</a></div>
+    {% if active_alerts %}<div class="alert-rule-list">{% for alert in active_alerts %}<a href="{% url 'monitoring:alert_list' project.pk %}"><span class="alert-rule-list__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></span><span><strong>{{ alert.name }}</strong><small>{{ alert.get_metric_display }} {{ alert.get_condition_display }} {{ alert.threshold }} over {{ alert.time_window_minutes }} minutes</small></span><span class="badge badge-success">Active</span></a>{% endfor %}</div>{% else %}<div class="empty-inline empty-inline--card">No active alert rules. <a href="{% url 'monitoring:alert_create' project.pk %}">Create the first rule</a>.</div>{% endif %}
+  </section>
+</div>
+{% endblock %}

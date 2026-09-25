@@ -1,0 +1,22 @@
+# Normalize line endings: store LF in the repository so the Docker image and
+# Render builds behave the same on Windows, macOS, and Linux checkouts.
+* text=auto eol=lf
+
+*.py   text diff=python
+*.html text
+*.css  text
+*.js   text
+*.yml  text
+*.yaml text
+*.txt  text
+*.md   text
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.sqlite3 binary
+*.woff binary
+*.woff2 binary

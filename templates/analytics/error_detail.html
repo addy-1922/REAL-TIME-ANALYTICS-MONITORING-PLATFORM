@@ -1,0 +1,42 @@
+{% extends "base_app.html" %}
+{% load dashboard_tags %}
+
+{% block title %}Error #{{ event.id }}{% endblock %}
+{% block topbar_eyebrow %}Error monitoring{% endblock %}
+{% block topbar_title %}Error #{{ event.id }}{% endblock %}
+
+{% block content %}
+<div class="page-stack page-stack--narrow">
+  <header class="page-header">
+    <div><div class="eyebrow"><a class="text-link" href="{% url 'analytics:error_monitoring' %}">Error monitoring</a> / #{{ event.id }}</div><h1>{{ event.display_event_type }}</h1><p>An error event captured for <a class="text-link" href="{% url 'monitoring:project_detail' event.project.pk %}">{{ event.project }}</a>.</p></div>
+    <a class="btn btn-secondary" href="{% url 'monitoring:event_detail' event.project.pk event.pk %}">Full event detail</a>
+  </header>
+
+  <section class="card event-summary" aria-labelledby="error-summary-title">
+    <div class="card__header"><div><span class="card__eyebrow">Measured values</span><h2 id="error-summary-title">Error summary</h2></div><span class="badge badge-danger">Error</span></div>
+    <dl class="detail-grid">
+      <div><dt>Event type</dt><dd>{{ event.get_event_type_display }}</dd></div>
+      <div><dt>Service</dt><dd>{{ event.service|default:"—" }}</dd></div>
+      <div><dt>Environment</dt><dd>{{ event.environment|default:"—" }}</dd></div>
+      <div><dt>Status code</dt><dd><span class="status-code status-code--{% if event.status_code >= 500 %}danger{% else %}warning{% endif %}">{{ event.status_code }}</span></dd></div>
+      <div><dt>Response time</dt><dd>{% if event.response_time is not None %}{{ event.response_time|intcomma }} ms{% else %}—{% endif %}</dd></div>
+      <div><dt>IP address</dt><dd>{{ event.ip_address|default:"—" }}</dd></div>
+      <div><dt>Project ID</dt><dd><code>#{{ event.project_id }}</code></dd></div>
+      <div><dt>Created</dt><dd><time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at }}</time></dd></div>
+    </dl>
+  </section>
+
+  <section class="card code-card" aria-labelledby="error-message-title">
+    <div class="card__header"><div><span class="card__eyebrow">Error payload</span><h2 id="error-message-title">Message</h2></div><button class="btn btn-sm btn-secondary" type="button" data-copy-target="#error-message-value">Copy message</button></div>
+    <pre class="code-block" id="error-message-value">{{ event.message|default:"No message was provided." }}</pre>
+  </section>
+
+  <section class="card code-card" aria-labelledby="error-metadata-title">
+    <div class="card__header"><div><span class="card__eyebrow">Structured data</span><h2 id="error-metadata-title">Metadata</h2></div><button class="btn btn-sm btn-secondary" type="button" data-copy-target="#error-metadata-value">Copy metadata</button></div>
+    {{ event.metadata|json_script:"error-metadata-data" }}
+    <pre class="code-block" id="error-metadata-value" data-json-render="#error-metadata-data">{{ event.metadata }}</pre>
+  </section>
+
+  <div class="detail-navigation"><a class="btn btn-secondary" href="{% url 'analytics:error_monitoring' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>Back to error monitoring</a></div>
+</div>
+{% endblock %}

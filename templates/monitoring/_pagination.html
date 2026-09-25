@@ -1,0 +1,23 @@
+{% load dashboard_tags %}
+{% if is_paginated %}
+<nav class="pagination" aria-label="Pagination">
+  <div class="pagination__summary"><span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span><span>{{ page_obj.paginator.count|intcomma }} result{{ page_obj.paginator.count|pluralize }}</span></div>
+  <div class="pagination__controls">
+    {% if page_obj.has_previous %}
+    <a class="pagination__arrow" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page=1" aria-label="First page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 7-5 5 5 5M18 7l-5 5 5 5"/></svg><span class="sr-only">First page</span></a>
+    <a class="btn btn-sm btn-secondary" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>Previous</a>
+    {% else %}
+    <span class="pagination__arrow is-disabled" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 7-5 5 5 5M18 7l-5 5 5 5"/></svg><span class="sr-only">First page</span></span>
+    <span class="btn btn-sm btn-secondary is-disabled" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>Previous</span>
+    {% endif %}
+    <span class="pagination__current" aria-current="page">{{ page_obj.number }}</span>
+    {% if page_obj.has_next %}
+    <a class="btn btn-sm btn-secondary" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Next<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+    <a class="pagination__arrow" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.paginator.num_pages }}" aria-label="Last page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 7 5 5-5 5M6 7l5 5-5 5"/></svg><span class="sr-only">Last page</span></a>
+    {% else %}
+    <span class="btn btn-sm btn-secondary is-disabled" aria-disabled="true">Next<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>
+    <span class="pagination__arrow is-disabled" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 7 5 5-5 5M6 7l5 5-5 5"/></svg><span class="sr-only">Last page</span></span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}

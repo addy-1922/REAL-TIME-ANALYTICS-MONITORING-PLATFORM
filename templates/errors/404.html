@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found{% endblock %}
+
+{% block content %}
+<section class="error-page" aria-labelledby="error-title">
+  <span class="error-code">404</span>
+  <div class="error-page__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.7 2.7 0 0 1 5.2 1c0 2-2.7 2.2-2.7 4M12 18h.01"/></svg></div>
+  <h1 id="error-title">We couldn’t find that page</h1>
+  <p>The address may be incorrect, or the resource may have moved or no longer be available.</p>
+  <div class="error-page__actions">
+    {% if user.is_authenticated %}<a class="btn btn-primary" href="{% url 'dashboard:overview' %}">Back to overview</a>{% else %}<a class="btn btn-primary" href="{% url 'accounts:login' %}">Back to sign in</a>{% endif %}
+    <button class="btn btn-secondary" type="button" data-copy-path>Copy page address</button>
+  </div>
+</section>
+{% endblock %}

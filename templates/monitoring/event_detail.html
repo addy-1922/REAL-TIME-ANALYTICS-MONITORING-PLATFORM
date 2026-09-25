@@ -1,0 +1,42 @@
+{% extends "base_app.html" %}
+{% load dashboard_tags %}
+
+{% block title %}Event #{{ event.id }} · {{ project.name }}{% endblock %}
+{% block topbar_eyebrow %}Event detail{% endblock %}
+{% block topbar_title %}#{{ event.id }}{% endblock %}
+
+{% block content %}
+<div class="page-stack page-stack--narrow">
+  <header class="page-header">
+    <div><div class="eyebrow"><a class="text-link" href="{% url 'monitoring:event_list' project.pk %}">{{ project.name }}</a> / Event #{{ event.id }}</div><h1>{{ event.display_event_type }}</h1><p>Captured {{ event.created_at }} in {{ event.environment|default:"an unspecified environment" }}.</p></div>
+    <div class="page-header__actions">{% if event.is_error %}<a class="btn btn-secondary" href="{% url 'analytics:error_detail' event.pk %}">Error details</a>{% endif %}<button class="btn btn-primary" type="button" data-copy-text="{{ event.id }}">Copy event ID</button></div>
+  </header>
+
+  <section class="card event-summary" aria-labelledby="event-summary-title">
+    <div class="card__header"><div><span class="card__eyebrow">Measured values</span><h2 id="event-summary-title">Event summary</h2></div>{% if event.is_error %}<span class="badge badge-danger">Error</span>{% elif event.is_success %}<span class="badge badge-success">Success</span>{% else %}<span class="badge badge-neutral">Other</span>{% endif %}</div>
+    <dl class="detail-grid">
+      <div><dt>Event type</dt><dd>{{ event.get_event_type_display }}</dd></div>
+      <div><dt>Custom name</dt><dd>{{ event.custom_event_name|default:"—" }}</dd></div>
+      <div><dt>Service</dt><dd>{{ event.service|default:"—" }}</dd></div>
+      <div><dt>Environment</dt><dd>{{ event.environment|default:"—" }}</dd></div>
+      <div><dt>Status code</dt><dd><span class="status-code status-code--{% if event.status_code >= 500 %}danger{% elif event.status_code >= 400 %}warning{% else %}success{% endif %}">{{ event.status_code }}</span></dd></div>
+      <div><dt>Response time</dt><dd>{% if event.response_time is not None %}{{ event.response_time|intcomma }} ms{% if event.is_slow %} <span class="badge badge-warning">Slow</span>{% endif %}{% else %}—{% endif %}</dd></div>
+      <div><dt>IP address</dt><dd>{% if event.ip_address %}<button class="copy-chip" type="button" data-copy-text="{{ event.ip_address }}"><code>{{ event.ip_address }}</code><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span class="sr-only">Copy IP address</span></button>{% else %}—{% endif %}</dd></div>
+      <div><dt>Created</dt><dd><time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at }}</time></dd></div>
+    </dl>
+  </section>
+
+  <section class="card code-card" aria-labelledby="event-message-title">
+    <div class="card__header"><div><span class="card__eyebrow">Event payload</span><h2 id="event-message-title">Message</h2></div></div>
+    <pre class="code-block">{{ event.message|default:"No message was provided." }}</pre>
+  </section>
+
+  <section class="card code-card" aria-labelledby="event-metadata-title">
+    <div class="card__header"><div><span class="card__eyebrow">Structured data</span><h2 id="event-metadata-title">Metadata</h2></div><button class="btn btn-sm btn-secondary" type="button" data-copy-target="#event-metadata-value">Copy metadata</button></div>
+    {{ event.metadata|json_script:"event-metadata-data" }}
+    <pre class="code-block" id="event-metadata-value" data-json-render="#event-metadata-data">{{ event.metadata|json_value }}</pre>
+  </section>
+
+  <div class="detail-navigation"><a class="btn btn-secondary" href="{% url 'monitoring:event_list' project.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>Back to all events</a><a class="btn btn-ghost" href="{% url 'monitoring:project_detail' project.pk %}">Project details</a></div>
+</div>
+{% endblock %}
