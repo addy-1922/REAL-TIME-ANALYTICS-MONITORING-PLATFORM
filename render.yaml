@@ -17,9 +17,9 @@ services:
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
-        value: "localhost,127.0.0.1,real-time-analytics-monitoring-platform.onrender.com"
+        sync: false
       - key: CSRF_TRUSTED_ORIGINS
-        value: "https://real-time-analytics-monitoring-platform.onrender.com"
+        sync: false
       - key: SECURE_SSL_REDIRECT
         value: "True"
       - key: DATABASE_URL

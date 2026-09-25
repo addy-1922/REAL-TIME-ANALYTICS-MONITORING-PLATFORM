@@ -16,7 +16,11 @@ def env_bool(name, default=False):
 
 
 def env_list(name, default=""):
-    return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+    value = os.getenv(name, default).strip()
+    if value.startswith("[") and value.endswith("]"):
+        value = value[1:-1]
+    items = (item.strip().strip("'\"") for item in value.split(","))
+    return [item for item in items if item]
 
 
 def database_config_from_url(url):
@@ -57,14 +61,8 @@ if not SECRET_KEY:
     else:
         raise RuntimeError("SECRET_KEY is required when DEBUG is False")
 
-ALLOWED_HOSTS = env_list(
-    "ALLOWED_HOSTS",
-    "localhost,127.0.0.1,real-time-analytics-monitoring-platform.onrender.com",
-)
-CSRF_TRUSTED_ORIGINS = env_list(
-    "CSRF_TRUSTED_ORIGINS",
-    "https://real-time-analytics-monitoring-platform.onrender.com",
-)
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
