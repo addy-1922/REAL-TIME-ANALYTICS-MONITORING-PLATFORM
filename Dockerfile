@@ -21,10 +21,12 @@ COPY --chown=app:app . .
 # while still root.
 RUN mkdir -p /app/staticfiles && chown -R app:app /app/staticfiles
 
+RUN chmod +x /app/docker-entrypoint.sh
+
 USER app
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 STOPSIGNAL SIGTERM
 
-CMD ["python", "-m", "uvicorn", "config.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

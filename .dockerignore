@@ -1,6 +1,7 @@
 **
 !requirements.txt
 !manage.py
+!docker-entrypoint.sh
 !config/
 !config/**
 !accounts/
