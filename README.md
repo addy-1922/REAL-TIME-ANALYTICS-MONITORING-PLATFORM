@@ -16,7 +16,7 @@ This checkout has been executed and verified. The following commands were run su
 | Migration drift | `python manage.py makemigrations --check --dry-run` | `No changes detected` |
 | Deployment check | `python manage.py check --deploy` with `DEBUG=False` | Clean apart from the placeholder secret used for the check |
 | OpenAPI schema | `python manage.py spectacular --file schema.yml` | Generated with no warnings |
-| Test suite | `python manage.py test tests --settings=config.settings_test` | `Ran 114 tests ... OK` |
+| Test suite | `python manage.py test tests --settings=config.settings_test` | `Ran 120 tests ... OK` |
 | Demo data | `python manage.py seed_demo_data` | Seeded 2 projects, 420 events, alert rules, triggers and notifications |
 
 Both defects that earlier revisions of this document described as blocking are fixed: `django-redis` is now a pinned dependency in `requirements.txt`, and the `intcomma` filter is provided by the project template library `dashboard/templatetags/dashboard_tags.py`, which the affected templates load.
@@ -109,7 +109,7 @@ The checks in this document were executed with Python 3.13.9 and Django 5.2.17 o
 |-- notifications/            Notification model, views, services, and tasks
 |-- static/                   CSS, JavaScript, and image source directory
 |-- templates/                Django templates
-|-- tests/                   Automated test suite (114 tests) run under config.settings_test
+|-- tests/                   Automated test suite (120 tests) run under config.settings_test
 |-- media/                    Persistent uploaded profile pictures
 |-- manage.py                 Django management entry point
 |-- requirements.txt          Pinned Python dependencies
@@ -677,7 +677,7 @@ There is no `pyproject.toml`, package manifest, Ruff configuration, mypy configu
 | Migration drift | `python manage.py makemigrations --check --dry-run` | `No changes detected` |
 | Deployment check | `python manage.py check --deploy` with `DEBUG=False` and a real `SECRET_KEY` | No issues other than the placeholder-secret warning caused by the test secret string |
 | OpenAPI schema generation | `python manage.py spectacular --file schema.yml` | Generates with zero warnings, including the `ApiKeyAuth` security scheme |
-| Test suite | `python manage.py test tests --settings=config.settings_test` | `Ran 114 tests ... OK` |
+| Test suite | `python manage.py test tests --settings=config.settings_test` | `Ran 120 tests ... OK` |
 | Lint | None available | No configured or installed project linter |
 | Type check | None available | No configured or installed type checker |
 
@@ -691,6 +691,7 @@ The suite covers:
 | `tests/test_analytics.py` | Aggregations, percentile math, filter forms, `error_q` / `success_q` semantics, cache versioning, and daily summaries |
 | `tests/test_api.py` | API-key authentication, event ingestion, DRF list and create permissions, filtering, and pagination |
 | `tests/test_dashboard_and_realtime.py` | Dashboard context and templates, `seed_demo_data`, and both WebSocket consumers including group naming and payload shape |
+| `tests/test_migration_recovery.py` | The `reset_render_database` confirmation, PostgreSQL-only, and test-runner guards, plus detection of a migration applied before its dependency |
 
 Run the checks locally before building:
 
@@ -791,9 +792,9 @@ monitoring.0001_initial on database 'default'.
 
 That is a database-state problem, not a code problem. `notifications/migrations/0001_initial.py` declares `("monitoring", "0001_initial")` because `Notification.project` is a foreign key to `monitoring.Project`, and `analytics/migrations/0001_initial.py` declares the same for the same reason. `monitoring.0001_initial` therefore has to be applied first. The declaration is correct and must stay. Do not delete, rewrite, reorder, or fake a migration to work around the error.
 
-On a database that holds no data worth keeping, drop and recreate the `public` schema once from a `psql` session, then let the normal startup migrate it from scratch. The full procedure, including the connection details and the verification queries, is in [`docs/RENDER_DATABASE_RESET.md`](docs/RENDER_DATABASE_RESET.md).
+On a database that holds no data worth keeping, reset the `public` schema once and let the normal startup migrate it from scratch. The opt-in `reset_render_database` command does this from the container entrypoint and is documented in [`docs/RENDER_DATABASE_MIGRATION_RECOVERY.md`](docs/RENDER_DATABASE_MIGRATION_RECOVERY.md); the equivalent manual `psql` procedure is in [`docs/RENDER_DATABASE_RESET.md`](docs/RENDER_DATABASE_RESET.md).
 
-The reset is a manual operator step and is deliberately not automated. Nothing in the repository performs it: `docker-entrypoint.sh` runs only `python manage.py migrate --noinput` followed by Uvicorn, and the Blueprint's `preDeployCommand` runs the same migration, so a restart or redeploy can never destroy the database. Once the database holds data worth keeping, replace this procedure with a normal data-preserving repair.
+The recovery is opt-in and one-time. It runs only when `RESET_RENDER_DATABASE=true` is configured on the web service **and** `django_migrations` is found to be inconsistent. It is not set anywhere in this repository, and after the first successful reset the inconsistent state is gone, so later restarts, redeploys, and scale events reset nothing. `docker-entrypoint.sh` runs only `python manage.py migrate --noinput` followed by Uvicorn when the variable is absent, and the Blueprint's `preDeployCommand` runs the same migration. Once the database holds data worth keeping, replace this procedure with a normal data-preserving repair.
 
 ### ASGI, WebSockets, origins, and Redis Channels
 
@@ -851,6 +852,7 @@ Render's filesystem is ephemeral. The `media/` directory is not a durable Render
 | `ERROR_SPIKE_THRESHOLD` | No | `5` | Minimum error count in the current five-minute window before `monitoring.tasks.detect_abnormal_error_spikes` can create a trigger. |
 | `ERROR_SPIKE_MULTIPLIER` | No | `3` | Ratio the current five-minute error count must reach, relative to the previous window, for a spike trigger. |
 | `LOG_LEVEL` | No | `INFO` | Root Python logging level. |
+| `RESET_RENDER_DATABASE` | One-time recovery only | Unset everywhere in this repository | Must be exactly `true` to let `docker-entrypoint.sh` run `python manage.py reset_render_database`. That command additionally requires PostgreSQL and an inconsistent `django_migrations` history, drops and recreates the `public` schema, and re-applies every migration. Remove the variable from Render after the recovery succeeds. |
 | `PORT` | Render: supplied | Dynamic | Uvicorn must bind to Render's supplied port. The Docker image listens on 8000. |
 | `DJANGO_SETTINGS_MODULE` | No | `config.settings` by entry points | Selects settings for management, Celery, and ASGI processes. |
 
@@ -941,7 +943,7 @@ Stop every extra Beat process. Keep the Render Beat service at one instance and 
 
 ### `InconsistentMigrationHistory` during deployment
 
-`migrate` fails when `django_migrations` records a migration as applied while one of its declared dependencies is not applied, for example `notifications.0001_initial` applied before `monitoring.0001_initial`. Do not fake, reorder, or edit migrations to make the error disappear. Inspect the recorded state with `python manage.py showmigrations` from a service shell, then either repair the recorder deliberately or, on a new database with no data to preserve, follow the one-time schema reset in [`docs/RENDER_DATABASE_RESET.md`](docs/RENDER_DATABASE_RESET.md).
+`migrate` fails when `django_migrations` records a migration as applied while one of its declared dependencies is not applied, for example `notifications.0001_initial` applied before `monitoring.0001_initial`. Do not fake, reorder, or edit migrations to make the error disappear. Inspect the recorded state with `python manage.py showmigrations` from a service shell, then either repair the recorder deliberately or, on a new database with no data to preserve, follow the one-time recovery in [`docs/RENDER_DATABASE_MIGRATION_RECOVERY.md`](docs/RENDER_DATABASE_MIGRATION_RECOVERY.md).
 
 ### Port 8000 is already in use
 

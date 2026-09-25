@@ -5,6 +5,12 @@ managed PostgreSQL instance. It is documented, not automated: nothing in this
 repository performs it, so a restart, redeploy, or scale event can never destroy
 the database.
 
+For the same reset performed by the opt-in `reset_render_database` management
+command, see [`RENDER_DATABASE_MIGRATION_RECOVERY.md`](RENDER_DATABASE_MIGRATION_RECOVERY.md).
+That command is gated on `RESET_RENDER_DATABASE=true` and on the database
+actually being in the inconsistent state; this document covers doing it by hand
+from `psql` instead.
+
 ## 1. Why this is needed
 
 The current deployment fails at the migration step in `docker-entrypoint.sh`:
