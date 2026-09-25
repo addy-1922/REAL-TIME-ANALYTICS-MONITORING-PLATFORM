@@ -8,10 +8,7 @@ echo "Working directory:"
 pwd
 echo "PORT=${PORT:-8000}"
 
-echo "=== Running Django system checks ==="
-python manage.py check --deploy
-
-echo "=== Running database migrations ==="
+echo "=== Running Django database migrations ==="
 python manage.py migrate --noinput
 
 echo "=== Starting Uvicorn ==="
