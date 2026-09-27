@@ -8,6 +8,9 @@ echo "Working directory:"
 pwd
 echo "PORT=${PORT:-8000}"
 
+echo "=== Checking accounts migrations ==="
+python manage.py showmigrations accounts
+
 echo "=== Running Django database migrations ==="
 python manage.py migrate --noinput
 
