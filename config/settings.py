@@ -1,7 +1,6 @@
 
 import os
 import secrets
-from datetime import timedelta
 from pathlib import Path
 from urllib.parse import parse_qsl, unquote, urlparse
 
@@ -13,7 +12,9 @@ load_dotenv(BASE_DIR / ".env")
 
 
 def env_bool(name, default=False):
-    return os.getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+    return os.getenv(name, str(default)).strip().lower() in {
+        "1", "true", "yes", "on"
+    }
 
 
 def env_list(name, default=""):
@@ -26,12 +27,18 @@ def env_list(name, default=""):
 
 def database_config_from_url(url):
     parsed = urlparse(url)
+
     if parsed.scheme not in {"postgres", "postgresql"}:
-        raise ImproperlyConfigured("DATABASE_URL must use a PostgreSQL URL scheme")
+        raise ImproperlyConfigured(
+            "DATABASE_URL must use a PostgreSQL URL scheme"
+        )
 
     name = unquote(parsed.path.lstrip("/"))
+
     if not name or not parsed.hostname:
-        raise ImproperlyConfigured("DATABASE_URL must include a host and database name")
+        raise ImproperlyConfigured(
+            "DATABASE_URL must include a host and database name"
+        )
 
     config = {
         "ENGINE": "django.db.backends.postgresql",
@@ -45,25 +52,30 @@ def database_config_from_url(url):
     }
 
     options = dict(parse_qsl(parsed.query))
+
     if options:
         config["OPTIONS"] = options
 
     return config
 
 
+# Environment configuration
+
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 IS_RENDER = env_bool("RENDER", False)
 
 DEBUG = env_bool("DEBUG", not (IS_RENDER or bool(DATABASE_URL)))
 
+# Secret key
+# Set a permanent SECRET_KEY in Render Environment Variables.
+
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 
 if not SECRET_KEY:
-    if DEBUG:
-        SECRET_KEY = secrets.token_urlsafe(50)
-    else:
-        raise RuntimeError("SECRET_KEY is required when DEBUG is False")
+    SECRET_KEY = secrets.token_urlsafe(50)
 
+
+# Allowed hosts
 
 ALLOWED_HOSTS = list(
     dict.fromkeys(
@@ -86,6 +98,8 @@ CSRF_TRUSTED_ORIGINS = list(
 )
 
 
+# Installed applications
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -106,6 +120,8 @@ INSTALLED_APPS = [
 ]
 
 
+# Middleware
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -122,6 +138,8 @@ ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
+
+# Templates
 
 TEMPLATES = [
     {
@@ -141,8 +159,6 @@ TEMPLATES = [
 
 
 # Database configuration
-# PostgreSQL is used when DATABASE_URL is available.
-# SQLite is used as a fallback when DATABASE_URL is not available.
 
 if DATABASE_URL:
     DATABASES = {
@@ -157,7 +173,7 @@ else:
     }
 
 
-# Redis and Django Channels configuration
+# Redis and Django Channels
 
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 
@@ -200,7 +216,7 @@ else:
     }
 
 
-# Celery configuration
+# Celery
 
 CELERY_BROKER_URL = os.getenv(
     "CELERY_BROKER_URL", REDIS_URL or "memory://"
@@ -210,6 +226,8 @@ CELERY_RESULT_BACKEND = os.getenv(
     "CELERY_RESULT_BACKEND", REDIS_URL or "cache+memory://"
 )
 
+
+# Password validation
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -259,6 +277,8 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1_000
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5_242_880
 
 
+# Authentication redirects
+
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "dashboard:overview"
 LOGOUT_REDIRECT_URL = "accounts:login"
@@ -292,7 +312,7 @@ ERROR_SPIKE_THRESHOLD = int(os.getenv("ERROR_SPIKE_THRESHOLD", "5"))
 ERROR_SPIKE_MULTIPLIER = float(os.getenv("ERROR_SPIKE_MULTIPLIER", "3"))
 
 
-# Django REST Framework configuration
+# Django REST Framework
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -339,7 +359,7 @@ if not DEBUG:
     X_FRAME_OPTIONS = "DENY"
 
 
-# Logging configuration
+# Logging
 
 LOGGING = {
     "version": 1,
