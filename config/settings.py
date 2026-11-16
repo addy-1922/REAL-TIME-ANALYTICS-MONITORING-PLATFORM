@@ -164,18 +164,15 @@ if DATABASE_URL:
     DATABASES = {
         "default": database_config_from_url(DATABASE_URL)
     }
-
-elif IS_RENDER:
-    raise ImproperlyConfigured(
-        "DATABASE_URL is missing. Add your Render PostgreSQL "
-        "Internal Database URL in Environment Variables."
-    )
-
 else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": (
+                "/tmp/db.sqlite3"
+                if IS_RENDER
+                else BASE_DIR / "db.sqlite3"
+            ),
         }
     }
 
@@ -268,9 +265,6 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-
-if not MEDIA_ROOT.exists():
-    MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 STORAGES = {
     "default": {
