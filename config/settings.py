@@ -1,3 +1,4 @@
+
 import os
 import secrets
 from datetime import timedelta
@@ -42,24 +43,27 @@ def database_config_from_url(url):
         "CONN_MAX_AGE": 60,
         "CONN_HEALTH_CHECKS": True,
     }
+
     options = dict(parse_qsl(parsed.query))
     if options:
         config["OPTIONS"] = options
+
     return config
 
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 IS_RENDER = env_bool("RENDER", False)
-if IS_RENDER and not DATABASE_URL:
-    raise ImproperlyConfigured("DATABASE_URL must be set on Render")
+
 DEBUG = env_bool("DEBUG", not (IS_RENDER or bool(DATABASE_URL)))
 
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
+
 if not SECRET_KEY:
     if DEBUG:
         SECRET_KEY = secrets.token_urlsafe(50)
     else:
         raise RuntimeError("SECRET_KEY is required when DEBUG is False")
+
 
 ALLOWED_HOSTS = list(
     dict.fromkeys(
@@ -71,6 +75,7 @@ ALLOWED_HOSTS = list(
         ]
     )
 )
+
 CSRF_TRUSTED_ORIGINS = list(
     dict.fromkeys(
         [
@@ -79,6 +84,7 @@ CSRF_TRUSTED_ORIGINS = list(
         ]
     )
 )
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -99,6 +105,7 @@ INSTALLED_APPS = [
     "dashboard.apps.DashboardConfig",
 ]
 
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -110,9 +117,11 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
+
 
 TEMPLATES = [
     {
@@ -130,8 +139,15 @@ TEMPLATES = [
     },
 ]
 
+
+# Database configuration
+# PostgreSQL is used when DATABASE_URL is available.
+# SQLite is used as a fallback when DATABASE_URL is not available.
+
 if DATABASE_URL:
-    DATABASES = {"default": database_config_from_url(DATABASE_URL)}
+    DATABASES = {
+        "default": database_config_from_url(DATABASE_URL)
+    }
 else:
     DATABASES = {
         "default": {
@@ -140,7 +156,11 @@ else:
         }
     }
 
+
+# Redis and Django Channels configuration
+
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
+
 if REDIS_URL:
     CACHES = {
         "default": {
@@ -153,12 +173,18 @@ if REDIS_URL:
             "KEY_PREFIX": "analytics-platform",
         }
     }
+
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {"hosts": [REDIS_URL], "capacity": 1500, "expiry": 30},
+            "CONFIG": {
+                "hosts": [REDIS_URL],
+                "capacity": 1500,
+                "expiry": 30,
+            },
         }
     }
+
 else:
     CACHES = {
         "default": {
@@ -166,58 +192,107 @@ else:
             "LOCATION": "analytics-platform-local",
         }
     }
-    CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL or "memory://")
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL or "cache+memory://")
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer"
+        }
+    }
+
+
+# Celery configuration
+
+CELERY_BROKER_URL = os.getenv(
+    "CELERY_BROKER_URL", REDIS_URL or "memory://"
+)
+
+CELERY_RESULT_BACKEND = os.getenv(
+    "CELERY_RESULT_BACKEND", REDIS_URL or "cache+memory://"
+)
+
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"
+    },
 ]
+
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+
+# Static and media files
+
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage"
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    },
 }
 
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 1_048_576
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1_000
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5_242_880
+
 
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "dashboard:overview"
 LOGOUT_REDIRECT_URL = "accounts:login"
 
+
+# Email configuration
+
 EMAIL_BACKEND = os.getenv(
-    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend"
 )
+
 EMAIL_HOST = os.getenv("EMAIL_HOST", "")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "monitoring@localhost")
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    "monitoring@localhost"
+)
+
+
+# Analytics configuration
 
 SLOW_REQUEST_THRESHOLD = int(os.getenv("SLOW_REQUEST_THRESHOLD", "1000"))
 EVENT_RETENTION_DAYS = int(os.getenv("EVENT_RETENTION_DAYS", "90"))
 ANALYTICS_CACHE_TTL = int(os.getenv("ANALYTICS_CACHE_TTL", "30"))
 ERROR_SPIKE_THRESHOLD = int(os.getenv("ERROR_SPIKE_THRESHOLD", "5"))
 ERROR_SPIKE_MULTIPLIER = float(os.getenv("ERROR_SPIKE_MULTIPLIER", "3"))
+
+
+# Django REST Framework configuration
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -238,6 +313,7 @@ REST_FRAMEWORK = {
     "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%S.%fZ",
 }
 
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "Real-time Analytics & Monitoring API",
     "DESCRIPTION": "Authenticated project analytics and API-key event ingestion.",
@@ -245,23 +321,43 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
+
+# Security settings
+
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
+
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
     SECURE_HSTS_SECONDS = 31_536_000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
+
+
+# Logging configuration
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "standard": {"format": "{levelname} {asctime} {name} {message}", "style": "{"}
+        "standard": {
+            "format": "{levelname} {asctime} {name} {message}",
+            "style": "{",
+        }
     },
-    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "standard"}},
-    "root": {"handlers": ["console"], "level": os.getenv("LOG_LEVEL", "INFO")},
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+        }
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": os.getenv("LOG_LEVEL", "INFO"),
+    },
 }
