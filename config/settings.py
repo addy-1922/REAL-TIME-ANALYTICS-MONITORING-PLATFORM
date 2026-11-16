@@ -83,14 +83,14 @@ ALLOWED_HOSTS = list(
     dict.fromkeys([
         "localhost",
         "127.0.0.1",
-        "real-time-analytics-monitoring-platform-2.onrender.com",
+        "real-time-analytics-monitoring-platform-3.onrender.com",
         *env_list("ALLOWED_HOSTS"),
     ])
 )
 
 CSRF_TRUSTED_ORIGINS = list(
     dict.fromkeys([
-        "https://real-time-analytics-monitoring-platform-2.onrender.com",
+        "https://real-time-analytics-monitoring-platform-3.onrender.com",
         *env_list("CSRF_TRUSTED_ORIGINS"),
     ])
 )
