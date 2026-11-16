@@ -19,8 +19,10 @@ def env_bool(name, default=False):
 
 def env_list(name, default=""):
     value = os.getenv(name, default).strip()
+
     if value.startswith("[") and value.endswith("]"):
         value = value[1:-1]
+
     items = (item.strip().strip("'\"") for item in value.split(","))
     return [item for item in items if item]
 
@@ -66,8 +68,8 @@ IS_RENDER = env_bool("RENDER", False)
 
 DEBUG = env_bool("DEBUG", not (IS_RENDER or bool(DATABASE_URL)))
 
+
 # Secret key
-# Set a permanent SECRET_KEY in Render Environment Variables.
 
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 
@@ -78,23 +80,19 @@ if not SECRET_KEY:
 # Allowed hosts
 
 ALLOWED_HOSTS = list(
-    dict.fromkeys(
-        [
-            "localhost",
-            "127.0.0.1",
-            "real-time-analytics-monitoring-platform-2.onrender.com",
-            *env_list("ALLOWED_HOSTS"),
-        ]
-    )
+    dict.fromkeys([
+        "localhost",
+        "127.0.0.1",
+        "real-time-analytics-monitoring-platform-2.onrender.com",
+        *env_list("ALLOWED_HOSTS"),
+    ])
 )
 
 CSRF_TRUSTED_ORIGINS = list(
-    dict.fromkeys(
-        [
-            "https://real-time-analytics-monitoring-platform-2.onrender.com",
-            *env_list("CSRF_TRUSTED_ORIGINS"),
-        ]
-    )
+    dict.fromkeys([
+        "https://real-time-analytics-monitoring-platform-2.onrender.com",
+        *env_list("CSRF_TRUSTED_ORIGINS"),
+    ])
 )
 
 
@@ -107,10 +105,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
     "rest_framework",
     "django_filters",
     "drf_spectacular",
     "channels",
+
     "accounts.apps.AccountsConfig",
     "monitoring.apps.MonitoringConfig",
     "analytics.apps.AnalyticsConfig",
@@ -164,6 +164,13 @@ if DATABASE_URL:
     DATABASES = {
         "default": database_config_from_url(DATABASE_URL)
     }
+
+elif IS_RENDER:
+    raise ImproperlyConfigured(
+        "DATABASE_URL is missing. Add your Render PostgreSQL "
+        "Internal Database URL in Environment Variables."
+    )
+
 else:
     DATABASES = {
         "default": {
@@ -245,6 +252,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# Internationalization
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
@@ -259,6 +268,9 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+if not MEDIA_ROOT.exists():
+    MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 STORAGES = {
     "default": {
@@ -334,9 +346,13 @@ REST_FRAMEWORK = {
 }
 
 
+# API Documentation
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "Real-time Analytics & Monitoring API",
-    "DESCRIPTION": "Authenticated project analytics and API-key event ingestion.",
+    "DESCRIPTION": (
+        "Authenticated project analytics and API-key event ingestion."
+    ),
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
