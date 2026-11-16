@@ -1,6 +1,6 @@
 # Signal Watch
 
-**Live Demo:** [Open Signal Watch](https://real-time-analytics-monitoring-platform-3.onrender.com)
+**Live Demo:** [https://real-time-analytics-monitoring-platform-3.onrender.com](https://real-time-analytics-monitoring-platform-3.onrender.com)
 
 **Signal Watch** is a real-time application monitoring and analytics platform built using **Python, Django 5.2, and Django REST Framework**. It enables developers to ingest, monitor, store, and analyze application events through secure REST APIs.
 
@@ -51,4 +51,3 @@ Visit the deployed application:
 [https://real-time-analytics-monitoring-platform-3.onrender.com](https://real-time-analytics-monitoring-platform-3.onrender.com)
 
 The demo database starts empty. Register an account or create an administrator before accessing the monitoring dashboard.
-
